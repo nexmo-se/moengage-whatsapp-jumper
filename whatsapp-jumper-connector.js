@@ -11,8 +11,9 @@ const qs = require('qs');
 const client = require("redis").createClient()
 const port = process.env.PORT || 3001;
 const callback_url = "https://test.urzo.online/jumper_callback"
-const moengage_callback = "https://test.urzo.online/moengage_callback"
-
+const moengage_callback = "https://sdk-whatsapptesting.moestaging.com/whatsapp/vonage/dlr"
+const moengage_callback_dlr = "https://sdk-whatsapptesting.moestaging.com/whatsapp/haptik/dlr"
+const _token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJEazUwMFlabHlYdHVKbXZrd3BRR01LUjljU2JLIiwiYXVkIjoib0RSMmdQRmgxTWtFZTBTbjFBSVNhTGJUOTBTU1M3bHAiLCJpc3MiOiJ1cm46XC9cL2FwaWdlZS1lZGdlLUpXVC1wb2xpY3ktdGVzdCIsIm1lcmNoYW50X2lkIjoiNTI1ODkxODM4NzM4NDMyMCIsImV4cCI6MTY5Mjg2NjM0NCwiaWF0IjoxNjg1MDkwMzQ0LCJqdGkiOiIyMzE4MDVhZS05ZDRjLTQzNDEtYTVjMC0yZDUzNDE5NDMzZjAifQ.X0P5cfqcpcIMY-EELMeqM3hps2ohaXp_BtUryTGt0A6hMCr-zylOKE1GLWkP8pwgzQVUGm1xIWYTyYEve8DN0RfGKxdDzWtFt_Dx9P77aJaqfqV7fuLxBsKVgx-4KrffiNq3oallfCkiCZAQNqMWxunoziq1-8bvcryHhQ_6fiHg40y3ziEiTFOSGtqbHT7F3MRf9qvpKNg_RiBgOgUvZyxJo8iTjwsgHONpR2mbHzK0Y1zl9xpOk0Jf4Z8Bph7Ohz5ZJDKgWtOTvAJRGOFBZKwDn_tbA6wCmIOtw8zRZAGQ6Lu3y7CYM2mrgQ5aj54rUNPOHWkfCcCg0lDWiyD4RA"
 const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
 
@@ -35,6 +36,32 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
 app.use("/js", express.static(path.join(__dirname, "node_modules/nexmo-client/dist")));
+// app.use(function(req, res, next) {
+//   console.log("post",req.body)
+//   if (!req.headers.authorization) {
+//     mes = {
+//       "status": "failure",
+//       "error" : {
+//       "code" : "7000",
+//       "message" : "Invalid credentials"
+//       }
+//     }
+//     return res.json(mes);
+//   }else{
+//     const token = req.headers.authorization.split(' ')[1];
+//     if(token!= _token){
+//       mes = {
+//         "status": "failure",
+//         "error" : {
+//         "code" : "7000",
+//         "message" : "Invalid credentials"
+//         }
+//       }
+//       return res.json(mes);     
+//     }
+//   }
+//   next();
+// });
 
 
 app.get('/', (req, res) => {
@@ -81,6 +108,30 @@ app.post('/jumper_callback', async (req, res) => {
         console.log(error);
         return {"status":"error","message":"failed sending callback to moengage"}
       }
+    }else if(payload.data.delivered == true){
+      reply_message = await create_moengage_dlr(payload.data.messageid, "delivered")
+      let data = JSON.stringify(reply_message);
+      console.log("Data to be sent:", data)
+      let config = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: moengage_callback,
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        data : data
+      };
+      try {
+        const response = await axios.request(config);
+        console.log(response.data)
+        if (response.data.success == true){
+          return {"status":"success","message":response.data}
+        }
+        else return {"status":"error","message":"failed sending  callback to moengage"}
+      } catch (error) {
+        console.log(error);
+        return {"status":"error","message":"failed sending callback to moengage"}
+      }
     }
   }
   
@@ -104,13 +155,26 @@ async function create_moengage_reply(message_id, conv_id, message, to){
     }
 }
 
+async function create_moengage_dlr(message_id, status){
+  return {
+    "statuses": [
+        {
+        "msg_id": message_id,
+        "status": status,
+        "timestamp": Date.now()
+        }
+      ]
+    }
+}
+
 app.get('/jumper_callback', (req, res) => {
   console.log("get",req.query)
   res.json(req.query, 200);
 });
 
 app.post('/jumper_send_whatsapp', async (req, res) => {
-  console.log("post",req.body)
+  console.log("post Whatsapp: ")
+  console.dir(req.body, {depth:9})
   data = req.body
   templates = await jumper_fetch_templates();
   found = false
@@ -186,7 +250,8 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
         //       console.dir(comp.parameters[i], {depth:9})
         //     }
         //   }
-          
+        
+        comp["index"] = Number(comp["index"])
         
         components["BUTTONS"].push(comp)
       }

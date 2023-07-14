@@ -1,0 +1,3 @@
+- Regarding the API call to https://api.jumper.ai/chat/send-message, if the payload does not match the required payload for a template, an error should be returned
+- Can I set a custom message id (instead of the one jumper generates)
+- Is there an option for a non expiring auth token that we can share with Client?

@@ -1,19 +1,17 @@
 console.log("Starting Messaging Demo")
+require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const cookieParser = require('cookie-parser');
-const logger = require('morgan');
 const app = express();
 const server = require('http').createServer();
 const axios = require('axios');
 const qs = require('qs');
 const client = require("redis").createClient()
 const port = process.env.PORT || 3001;
-const callback_url = "https://test.urzo.online/jumper_callback"
-const moengage_callback = "https://sdk-whatsapptesting.moestaging.com/whatsapp/vonage/dlr"
-const moengage_callback_dlr = "https://sdk-whatsapptesting.moestaging.com/whatsapp/haptik/dlr"
-const _token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJEazUwMFlabHlYdHVKbXZrd3BRR01LUjljU2JLIiwiYXVkIjoib0RSMmdQRmgxTWtFZTBTbjFBSVNhTGJUOTBTU1M3bHAiLCJpc3MiOiJ1cm46XC9cL2FwaWdlZS1lZGdlLUpXVC1wb2xpY3ktdGVzdCIsIm1lcmNoYW50X2lkIjoiNTI1ODkxODM4NzM4NDMyMCIsImV4cCI6MTY5Mjg2NjM0NCwiaWF0IjoxNjg1MDkwMzQ0LCJqdGkiOiIyMzE4MDVhZS05ZDRjLTQzNDEtYTVjMC0yZDUzNDE5NDMzZjAifQ.X0P5cfqcpcIMY-EELMeqM3hps2ohaXp_BtUryTGt0A6hMCr-zylOKE1GLWkP8pwgzQVUGm1xIWYTyYEve8DN0RfGKxdDzWtFt_Dx9P77aJaqfqV7fuLxBsKVgx-4KrffiNq3oallfCkiCZAQNqMWxunoziq1-8bvcryHhQ_6fiHg40y3ziEiTFOSGtqbHT7F3MRf9qvpKNg_RiBgOgUvZyxJo8iTjwsgHONpR2mbHzK0Y1zl9xpOk0Jf4Z8Bph7Ohz5ZJDKgWtOTvAJRGOFBZKwDn_tbA6wCmIOtw8zRZAGQ6Lu3y7CYM2mrgQ5aj54rUNPOHWkfCcCg0lDWiyD4RA"
+const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
+const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
+
+//token that Authenticates Moengage
+const _token = process.env.MOENGAGE_AUTH_AGAINTS
 const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
 
@@ -27,41 +25,34 @@ const findKeyValue = (obj, key, val) =>
 })();
 
 
-app.set('view engine', 'ejs'); 
-app.use('/', express.static(path.join(__dirname, 'static')));
-app.use(logger('dev'));
-app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use('/node_modules', express.static(path.join(__dirname, 'node_modules')));
-app.use("/js", express.static(path.join(__dirname, "node_modules/nexmo-client/dist")));
-// app.use(function(req, res, next) {
-//   console.log("post",req.body)
-//   if (!req.headers.authorization) {
-//     mes = {
-//       "status": "failure",
-//       "error" : {
-//       "code" : "7000",
-//       "message" : "Invalid credentials"
-//       }
-//     }
-//     return res.json(mes);
-//   }else{
-//     const token = req.headers.authorization.split(' ')[1];
-//     if(token!= _token){
-//       mes = {
-//         "status": "failure",
-//         "error" : {
-//         "code" : "7000",
-//         "message" : "Invalid credentials"
-//         }
-//       }
-//       return res.json(mes);     
-//     }
-//   }
-//   next();
-// });
+moengage_auth = function(req, res, next) {
+  console.log("post",req.body)
+  if (!req.headers.authorization) {
+    mes = {
+      "status": "failure",
+      "error" : {
+      "code" : "7000",
+      "message" : "Invalid credentials"
+      }
+    }
+    return res.json(mes);
+  }else{
+    const token = req.headers.authorization.split(' ')[1];
+    if(token!= _token){
+      mes = {
+        "status": "failure",
+        "error" : {
+        "code" : "7000",
+        "message" : "Invalid credentials"
+        }
+      }
+      return res.json(mes);     
+    }
+  }
+  next();
+}
 
 
 app.get('/', (req, res) => {
@@ -85,7 +76,7 @@ app.post('/jumper_callback', async (req, res) => {
   payload = req.body.event
   if(payload.subscription_type=="livechat"){
     if(!payload.data.agent){ //means it's from the user
-      reply_message = await create_moengage_reply(payload.data.messageid, payload.data.conversationid,payload.data.message,payload.data.mobilecountrycode+payload.data.mobile)
+      reply_message = await create_moengage_reply(payload.data.messageid, payload.data.conversationid,payload.data.message,payload.data.mobilecountrycode+payload.data.mobile, payload.data.replytomessage)
       let data = JSON.stringify(reply_message);
       console.log("Data to be sent:", data)
       let config = {
@@ -101,12 +92,12 @@ app.post('/jumper_callback', async (req, res) => {
         const response = await axios.request(config);
         console.log(response.data)
         if (response.data.success == true){
-          return {"status":"success","message":response.data}
+          return res.json({"status":"success","message":response.data})
         }
-        else return {"status":"error","message":"failed sending  callback to moengage"}
+        else return res.json({"status":"error","message":"failed sending  callback to moengage"})
       } catch (error) {
         console.log(error);
-        return {"status":"error","message":"failed sending callback to moengage"}
+        return res.json({"status":"error","message":"failed sending callback to moengage"})
       }
     }else if(payload.data.delivered == true){
       reply_message = await create_moengage_dlr(payload.data.messageid, "delivered")
@@ -125,41 +116,61 @@ app.post('/jumper_callback', async (req, res) => {
         const response = await axios.request(config);
         console.log(response.data)
         if (response.data.success == true){
-          return {"status":"success","message":response.data}
+          return res.json({"status":"success","message":response.data})
         }
-        else return {"status":"error","message":"failed sending  callback to moengage"}
+        else return res.json({"status":"error","message":"failed sending  callback to moengage"})
       } catch (error) {
         console.log(error);
-        return {"status":"error","message":"failed sending callback to moengage"}
+        return res.json({"status":"error","message":"failed sending callback to moengage"})
       }
     }
   }
   
-  res.json(200);
+  return res.json(200);
 });
 
 
-async function create_moengage_reply(message_id, conv_id, message, to){
-  var waba_number = await client.get("conv_id_waba_"+conv_id)
-  return {
+async function create_moengage_reply(message_id, conv_id, message, to, replytomessage = null){
+  var waba_number
+  var moengage_msg_id
+  var template_id
+  var tid = null
+  if (replytomessage){
+    tid = replytomessage.message.split("_")[1]
+    waba_number = await client.get("conv_id_waba_"+replytomessage.conversationid)
+    moengage_msg_id = await client.get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
+    template_id = await client.get("conv_id_moengage_template_id_"+replytomessage.conversationid)
+  }
+  
+  console.log("Template ID:",template_id)
+  console.log("TID:",tid)
+  
+
+
+  payload = {
     "from": to,
     "waba_number": waba_number,
     "timestamp": Date.now(),
     "type": "text",
     "context": {
-      "msg_id": message_id
-    },
-    "text": { 
-      "body": message
-      },
+      "msg_id": moengage_msg_id
     }
+  }
+
+  if(template_id == tid){
+    console.log("Reply to message detected: Treating as button with text")
+    payload["button"] = {"payload":{"nothing":0},"text":message}
+    payload["type"] = "button"
+  }
+  return payload
 }
 
 async function create_moengage_dlr(message_id, status){
+  var moengage_msg_id = await client.get("message_id_"+message_id)
   return {
     "statuses": [
         {
-        "msg_id": message_id,
+        "msg_id": moengage_msg_id,
         "status": status,
         "timestamp": Date.now()
         }
@@ -172,7 +183,7 @@ app.get('/jumper_callback', (req, res) => {
   res.json(req.query, 200);
 });
 
-app.post('/jumper_send_whatsapp', async (req, res) => {
+app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
   console.log("post Whatsapp: ")
   console.dir(req.body, {depth:9})
   data = req.body
@@ -192,7 +203,7 @@ app.post('/jumper_send_whatsapp', async (req, res) => {
           components = null
           if(data.template.components) components = data.template.components
           dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components)
-          res.json(dat).end
+          return res.json(dat).end
         }
       })
     }
@@ -206,7 +217,7 @@ app.post('/jumper_send_whatsapp', async (req, res) => {
       "message" : "TEMPLATE NOT FOUND"
       }
     }
-    res.json(mes);
+    return res.json(mes);
   }
   
 });
@@ -214,6 +225,7 @@ app.post('/jumper_send_whatsapp', async (req, res) => {
 
 //send whatsapp message with template
 async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_components){
+  console.log("Message ID from Moengage: ", msg_id)
   socialChannels = await jumper_fetch_social_channels();
 
   var components = {"HEADER":[],"BODY":[],"BUTTONS":[]}
@@ -287,6 +299,8 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
     if (response.data.success == true){
       client.set("message_id_"+response.data.message_id, msg_id)
       client.set("conv_id_waba_"+response.data.conversationid, waba_number)
+      client.set("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id)
+      client.set("conv_id_moengage_template_id_"+response.data.conversationid, template_id)
       return {"status":"success","message":response.data}
     }
     else return {"status":"error","message":"failed sending message"}
@@ -320,22 +334,22 @@ async function jumper_token(){
     //you can manually store the refresh token in redis using the key "jumper_refresh_token"
     if(token==null){
       console.log("Using seed Refresh Token")
-      token = "PUT_INITIAL_REFRESH_TOKEN_HERE"
+      token = process.env.SEED_REFRESH_TOKEN
     }
     let data = qs.stringify({
       'refresh_token': token,
       'grant_type': 'refresh_token' 
     });
     
-    //let's use the refresh token to generate auth using our basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
+    // let's use the refresh token to generate auth using our basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
     // 'Basic base64<client_key + ":" + client_secret>'
     let config = {
       method: 'post',
       maxBodyLength: Infinity,
       url: 'https://api.jumper.ai/oauth/refresh',
       headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded', 
-        'Authorization': 'Basic b0RSMmdQRmgxTWtFZTBTbjFBSVNhTGJUOTBTU1M3bHA6SVZSWVI4d3R3MVpnaWJBWQ=='
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': process.env.JUMPER_BASIC_AUTH
       },
       data : data
     };

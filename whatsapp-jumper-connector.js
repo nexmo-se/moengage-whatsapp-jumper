@@ -11,7 +11,7 @@ const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 
 //token that Authenticates Moengage
-const _token = process.env.MOENGAGE_AUTH_AGAINTS
+const _token = process.env.MOENGAGE_AUTH_AGAINST
 const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
 

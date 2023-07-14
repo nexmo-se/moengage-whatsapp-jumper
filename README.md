@@ -23,7 +23,7 @@ npm install axios dotenv express qs redis
     
     #This is what moengage authenticats against. We give this to them if they ask for the token
     
-    **MOENGAGE_AUTH_AGAINTS="xxxxxauth token"**
+    **MOENGAGE_AUTH_AGAINST="xxxxxauth token"**
     
     #Jumper basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
     

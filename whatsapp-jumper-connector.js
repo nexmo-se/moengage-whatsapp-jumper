@@ -5,15 +5,30 @@ const app = express();
 const server = require('http').createServer();
 const axios = require('axios');
 const qs = require('qs');
-const client = require("redis").createClient()
+const {pRateLimit} = require('p-ratelimit');
+const client = require("redis").createClient(6379, "127.0.0.1") //
 const port = process.env.PORT || 3001;
 const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
+const schedule = require('node-schedule');
+var morgan = require('morgan')
+
+app.use(morgan('combined'))
 
 //token that Authenticates Moengage
 const _token = process.env.MOENGAGE_AUTH_AGAINST
 const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
+
+
+//Sachin's Rate Limiter Code
+const limiter = pRateLimit({
+  interval: 500, // 1000 ms == 1 second
+  rate: 10, // 10 API calls per interval
+  concurrency: 10, // no more than 10 running at once
+  maxDelay: Math.ceil( (60 * 1000) * 60), // an API call delayed > 2 sec is rejected
+});
+
 
 (async () => {
   try {
@@ -184,6 +199,7 @@ app.get('/jumper_callback', (req, res) => {
 });
 
 app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
+  //--> add ratelimit 10 calls per second. Queue the calls
   console.log("post Whatsapp: ")
   console.dir(req.body, {depth:9})
   data = req.body
@@ -202,7 +218,16 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
           found=true
           components = null
           if(data.template.components) components = data.template.components
-          dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components)
+
+          //Sachin's Rate Limiter Code
+          // empty promise to ignite rate limit queue
+          await limiter(() => new Promise((resolve) => {
+            resolve();
+          }));
+
+          const dat = await limiter(() => sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components));
+          //
+          
           return res.json(dat).end
         }
       })
@@ -297,10 +322,10 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
     const response = await axios.request(config);
     console.log(response.data)
     if (response.data.success == true){
-      client.set("message_id_"+response.data.message_id, msg_id)
-      client.set("conv_id_waba_"+response.data.conversationid, waba_number)
-      client.set("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id)
-      client.set("conv_id_moengage_template_id_"+response.data.conversationid, template_id)
+      client.set("message_id_"+response.data.message_id, msg_id, {EX: 604800})
+      client.set("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
+      client.set("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
+      client.set("conv_id_moengage_template_id_"+response.data.conversationid, template_id, {EX: 604800})
       return {"status":"success","message":response.data}
     }
     else return {"status":"error","message":"failed sending message"}
@@ -326,44 +351,51 @@ async function jumper_token(){
   //If we no token is stored, means it's either expired or first use
   if(val==null){
 
-    //let's try getting our stored refresh token to generate a new auth
-    console.log("Using stored Refresh Token")
-    token = await client.get("jumper_refresh_token")
-    
-    //if no refresh token is stored, manually generate a new one and put it here
-    //you can manually store the refresh token in redis using the key "jumper_refresh_token"
-    if(token==null){
-      console.log("Using seed Refresh Token")
-      token = process.env.SEED_REFRESH_TOKEN
-    }
-    let data = qs.stringify({
-      'refresh_token': token,
-      'grant_type': 'refresh_token' 
-    });
-    
-    // let's use the refresh token to generate auth using our basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
-    // 'Basic base64<client_key + ":" + client_secret>'
-    let config = {
-      method: 'post',
-      maxBodyLength: Infinity,
-      url: 'https://api.jumper.ai/oauth/refresh',
-      headers: { 
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': process.env.JUMPER_BASIC_AUTH
-      },
-      data : data
-    };
+    refresh_jumper_tokens()
+  }
+}
+
+
+//refresh token function
+
+async function refresh_jumper_tokens(){
+  //let's try getting our stored refresh token to generate a new auth
+  console.log("Refreshing token")
+  token = await client.get("jumper_refresh_token")
   
-    try {
-      const response = await axios.request(config);
-      console.log(response.data)
-      client.set("jumper_auth_token",response.data.access_token,{EX: 2000000})
-      client.set("jumper_refresh_token",response.data.refresh_token)
-      return response.data.access_token
-    } catch (error) {
-      console.log(error);
-      return null
-    }
+  //if no refresh token is stored, manually generate a new one and put it here
+  //you can manually store the refresh token in redis using the key "jumper_refresh_token"
+  if(token==null){
+    console.log("Using seed Refresh Token")
+    token = process.env.SEED_REFRESH_TOKEN
+  }
+  let data = qs.stringify({
+    'refresh_token': token,
+    'grant_type': 'refresh_token' 
+  });
+  
+  // let's use the refresh token to generate auth using our basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
+  // 'Basic base64<client_key + ":" + client_secret>'
+  let config = {
+    method: 'post',
+    maxBodyLength: Infinity,
+    url: 'https://api.jumper.ai/oauth/refresh',
+    headers: { 
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': process.env.JUMPER_BASIC_AUTH
+    },
+    data : data
+  };
+
+  try {
+    const response = await axios.request(config);
+    console.log(response.data)
+    client.set("jumper_auth_token",response.data.access_token,{EX: 2000000})
+    client.set("jumper_refresh_token",response.data.refresh_token)
+    return response.data.access_token
+  } catch (error) {
+    console.log(error);
+    return null
   }
 }
 
@@ -469,8 +501,16 @@ server.on('request', app)
 
 server.listen(port, async () => {
   console.log(`Starting server at port: ${port}`)
+
+  //refresh tokens on start
+  await refresh_jumper_tokens()
   
   console.dir(await  jumper_set_subscription(), {depth:9})
+
+  //refresh the tokens every midnight
+  const job = schedule.scheduleJob('0 0 * * *', function(){
+    refresh_jumper_tokens()
+  });
 });
 
 // const localtunnel = require('localtunnel');

@@ -13,6 +13,24 @@ const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 const schedule = require('node-schedule');
 var morgan = require('morgan')
 
+const Agent = require('agentkeepalive');
+const keepAliveAgent = new Agent({
+  maxSockets: 100,
+  maxFreeSockets: 10,
+  timeout: 60000, // active socket keepalive for 60 seconds
+  freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
+});
+
+const httpsKeepAliveAgent = new Agent.HttpsAgent({
+  maxSockets: 100,
+  maxFreeSockets: 10,
+  timeout: 60000, // active socket keepalive for 60 seconds
+  freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
+});
+
+const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: httpsKeepAliveAgent});
+
+
 app.use(morgan('combined'))
 
 //token that Authenticates Moengage
@@ -104,7 +122,7 @@ app.post('/jumper_callback', async (req, res) => {
         data : data
       };
       try {
-        const response = await axios.request(config);
+        const response = await axiosInstance.request(config);
         console.log(response.data)
         if (response.data.success == true){
           return res.json({"status":"success","message":response.data})
@@ -128,7 +146,7 @@ app.post('/jumper_callback', async (req, res) => {
         data : data
       };
       try {
-        const response = await axios.request(config);
+        const response = await axiosInstance.request(config);
         console.log(response.data)
         if (response.data.success == true){
           return res.json({"status":"success","message":response.data})
@@ -319,7 +337,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
   };
 
   try {
-    const response = await axios.request(config);
+    const response = await axiosInstance.request(config);
     console.log(response.data)
     if (response.data.success == true){
       client.set("message_id_"+response.data.message_id, msg_id, {EX: 604800})
@@ -388,7 +406,7 @@ async function refresh_jumper_tokens(){
   };
 
   try {
-    const response = await axios.request(config);
+    const response = await axiosInstance.request(config);
     console.log(response.data)
     client.set("jumper_auth_token",response.data.access_token,{EX: 2000000})
     client.set("jumper_refresh_token",response.data.refresh_token)
@@ -410,7 +428,7 @@ async function jumper_fetch_social_channels(){
     }
   };
   try {
-    const response = await axios.request(config);
+    const response = await axaxiosInstanceios.request(config);
     return response.data
   } catch (error) {
     console.log(error);
@@ -429,7 +447,7 @@ async function jumper_fetch_templates(){
     }
   };
   try {
-    const response = await axios.request(config);    
+    const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
     console.log(error);
@@ -469,7 +487,7 @@ async function jumper_set_subscription(){
   };
 
   try {
-    const response = await axios.request(config);    
+    const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
     console.log(error);
@@ -489,7 +507,7 @@ async function jumper_fetch_subscriptions(){
   };
 
   try {
-    const response = await axios.request(config);    
+    const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
     console.log(error);

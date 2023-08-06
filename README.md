@@ -53,7 +53,7 @@ Copy `.env.samp` file as `.env` and put in the values for the following:
 	- How long a free socket is kept alive for reuse.
 
 
-**3. Run whatsapp-jumper-connector,js**
+## 3. Run whatsapp-jumper-connector,js
 
     node whatsapp-jumper-connector.js
 

@@ -15,17 +15,17 @@ var morgan = require('morgan')
 
 const Agent = require('agentkeepalive');
 const keepAliveAgent = new Agent({
-  maxSockets: 100,
-  maxFreeSockets: 10,
-  timeout: 60000, // active socket keepalive for 60 seconds
-  freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
+  maxSockets: parseInt(process.env.MAX_SOCKETS),
+  maxFreeSockets: parseInt(process.env.MAX_FREE_SOCKETS),
+  timeout: parseInt(process.env.SOCKET_TIMEOUT), // active socket keepalive for 60 seconds
+  freeSocketTimeout: parseInt(process.env.FREE_SOCKET_KEEPALIVE), // free socket keepalive for 30 seconds
 });
 
 const httpsKeepAliveAgent = new Agent.HttpsAgent({
-  maxSockets: 100,
-  maxFreeSockets: 10,
-  timeout: 60000, // active socket keepalive for 60 seconds
-  freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
+  maxSockets: parseInt(process.env.MAX_SOCKETS),
+  maxFreeSockets: parseInt(process.env.MAX_FREE_SOCKETS),
+  timeout: parseInt(process.env.SOCKET_TIMEOUT), // active socket keepalive for 60 seconds
+  freeSocketTimeout: parseInt(process.env.FREE_SOCKET_KEEPALIVE), // free socket keepalive for 30 seconds
 });
 
 const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: httpsKeepAliveAgent});
@@ -42,8 +42,8 @@ const findKeyValue = (obj, key, val) =>
 //Sachin's Rate Limiter Code
 const limiter = pRateLimit({
   interval: 500, // 1000 ms == 1 second
-  rate: 10, // 10 API calls per interval
-  concurrency: 10, // no more than 10 running at once
+  rate: parseInt(process.env.RATE_PER_SECOND), // 10 API calls per interval
+  concurrency: parseInt(process.env.CONCURRENT_API_CALLS), // no more than 10 running at once
   maxDelay: Math.ceil( (60 * 1000) * 60), // an API call delayed > 2 sec is rejected
 });
 

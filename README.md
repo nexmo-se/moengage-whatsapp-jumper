@@ -1,41 +1,57 @@
-**Moengage – Jumper Whatsapp API Connector**
+# **Moengage – Jumper Whatsapp API Connector**
 
 This application creates a middleware to enable Moengages's general connector to work with Jumper's Whatsapp API
 
-**Deployment Guide**
+# **Deployment Guide**
 
-**1. Install dependencies:**
-npm install axios dotenv express qs redis
+## **1. Install dependencies:**
 
-**2. Populate “.env”**
+    npm install axios dotenv express qs redis morgan p-ratelimit agentkeepalive
 
-    #This is the callback we pass to jumper when we subscribe to events
-    
-    **SUBSCRIBED_CALLBACK_URL="https://"**
-    
-    #this is the URL we post Moengage Callbacks
-    
-    **MOENGAGE_CALLBACK_URL="https://"**
-    
-    #port where we run this service
-    
-    **PORT=3001**
-    
-    #This is what moengage authenticats against. We give this to them if they ask for the token
-    
-    **MOENGAGE_AUTH_AGAINST="xxxxxauth token"**
-    
-    #Jumper basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
-    
-    #'Basic base64<client_key + ":" + client_secret>'
-    
-    **JUMPER_BASIC_AUTH="Basic xxxxxbasic credentials"**
-    
-    #if no refresh token is stored, manually generate a new one and put it here
-    
-    #you can manually store the refresh token in redis using the key "jumper_refresh_token"
-    
-    **SEED_REFRESH_TOKEN="SEED REFRESH TOKEN"**
+## **2. Populate “.env”**
+Copy `.env.samp` file as `.env` and put in the values for the following:
+ 
+ 
+
+ - **SUBSCRIBED_CALLBACK_URL**
+	- This is the callback we pass to jumper when we subscribe to events
+- **MOENGAGE_CALLBACK_URL**
+	- This is the URL we post Moengage Callbacks
+- **PORT**
+	- port where we run this service
+- **MOENGAGE_AUTH_AGAINTS**
+	- This is what moengage authenticates against. We give this to them if they ask for the token
+- **JUMPER_BASIC_AUTH**
+	- This is used to call Jumper's Refresh Token API
+    - Jumper basic auth: https://developers.jumper.ai/docs/oauth-api/1/routes/oauth/refresh/post
+    - 'Basic base64<client_key + ":" + client_secret>'
+- **SEED_REFRESH_TOKEN**
+	- If no refresh token is stored, manually generate a new one and put it here
+	- **Note**: You can manually store the refresh token in redis using the key "jumper_refresh_token"
+   
+	 
+
+   
+ ### LIMITER SETTINGS ###
+
+- 	**RATE_PER_SECOND**
+	- Rate per second allowed.
+- **CONCURRENT_API_CALLS**
+	- Number of concurrent calls allowed.
+
+
+
+
+### KEEPALIVE SETTINGS ###
+- **MAX_SOCKETS**
+	- Maximum number of sockets to allow per host. Default for Node 0.10 is 5, default for Node 0.12 is Infinity
+- **MAX_FREE_SOCKETS**
+	- Maximum number of sockets to leave open in a free state. 
+- **SOCKET_TIMEOUT**
+	- Socket timeout in milliseconds. This will set the timeout after the socket is connected.
+- **FREE_SOCKET_KEEPALIVE**
+	- How long a free socket is kept alive for reuse.
+
 
 **3. Run whatsapp-jumper-connector,js**
 

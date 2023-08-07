@@ -66,7 +66,7 @@ const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
 
 
-//Sachin's Rate Limiter Code
+//Rate Limiter Code
 const limiter = pRateLimit({
   interval: 500, // 1000 ms == 1 second
   rate: parseInt(process.env.RATE_PER_SECOND), // 10 API calls per interval
@@ -264,7 +264,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
           components = null
           if(data.template.components) components = data.template.components
 
-          //Sachin's Rate Limiter Code
+          // Rate Limiter Code
           // empty promise to ignite rate limit queue
           await limiter(() => new Promise((resolve) => {
             resolve();

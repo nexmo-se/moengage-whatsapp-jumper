@@ -6,12 +6,39 @@ const server = require('http').createServer();
 const axios = require('axios');
 const qs = require('qs');
 const {pRateLimit} = require('p-ratelimit');
-const client = require("redis").createClient(6379, "127.0.0.1") //
+//const client = require("redis").createClient(6379, "127.0.0.1") //
 const port = process.env.PORT || 3001;
 const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 const schedule = require('node-schedule');
 var morgan = require('morgan')
+const {Datastore} = require('@google-cloud/datastore');
+
+const datastore = new Datastore({
+  projectId: process.env.DT_PROJECT_ID,
+  keyFilename: process.env.DT_JSON_PATH
+});
+
+ // The kind for the new entity
+ const kind = process.env.DT_KIND;
+
+
+
+ async function dt_store(key, value, opt={}){
+  const taskKey = datastore.key([kind, key]);
+  const task = {
+    key: taskKey,
+    data: {value: value},
+  };
+  await datastore.save(task);
+ }
+
+ async function dt_get(key){
+  const taskKey = datastore.key([kind, key]);
+  const task = await datastore.get(taskKey)
+  if(task[0]==undefined) return null
+  return task[0].value
+ }
 
 const Agent = require('agentkeepalive');
 const keepAliveAgent = new Agent({
@@ -48,14 +75,14 @@ const limiter = pRateLimit({
 });
 
 
-(async () => {
-  try {
-    client.on('error', err => console.log('Redis Client Error', err));
-    await client.connect();
-  } catch (err) {
-    console.log(err);
-  }
-})();
+// (async () => {
+//   try {
+//     client.on('error', err => console.log('Redis Client Error', err));
+//     await client.connect();
+//   } catch (err) {
+//     console.log(err);
+//   }
+// })();
 
 
 app.use(express.json());
@@ -170,9 +197,9 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
   var tid = null
   if (replytomessage){
     tid = replytomessage.message.split("_")[1]
-    waba_number = await client.get("conv_id_waba_"+replytomessage.conversationid)
-    moengage_msg_id = await client.get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
-    template_id = await client.get("conv_id_moengage_template_id_"+replytomessage.conversationid)
+    waba_number = await dt_get("conv_id_waba_"+replytomessage.conversationid)
+    moengage_msg_id = await dt_get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
+    template_id = await dt_get("conv_id_moengage_template_id_"+replytomessage.conversationid)
   }
   
   console.log("Template ID:",template_id)
@@ -199,7 +226,7 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
 }
 
 async function create_moengage_dlr(message_id, status){
-  var moengage_msg_id = await client.get("message_id_"+message_id)
+  var moengage_msg_id = await dt_get("message_id_"+message_id)
   return {
     "statuses": [
         {
@@ -340,10 +367,10 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
     const response = await axiosInstance.request(config);
     console.log(response.data)
     if (response.data.success == true){
-      client.set("message_id_"+response.data.message_id, msg_id, {EX: 604800})
-      client.set("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
-      client.set("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
-      client.set("conv_id_moengage_template_id_"+response.data.conversationid, template_id, {EX: 604800})
+      await dt_store("message_id_"+response.data.message_id, msg_id, {EX: 604800})
+      await dt_store("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
+      await dt_store("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
+      await dt_store("conv_id_moengage_template_id_"+response.data.conversationid, template_id, {EX: 604800})
       return {"status":"success","message":response.data}
     }
     else return {"status":"error","message":"failed sending message"}
@@ -358,7 +385,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
 async function jumper_token(){
 
   //get the auth token stored in redis
-  var val = await client.get("jumper_auth_token")
+  var val = await dt_get("jumper_auth_token")
 
   //if we find the token, let's use it
   if (val){
@@ -379,7 +406,7 @@ async function jumper_token(){
 async function refresh_jumper_tokens(){
   //let's try getting our stored refresh token to generate a new auth
   console.log("Refreshing token")
-  token = await client.get("jumper_refresh_token")
+  token = await dt_get("jumper_refresh_token")
   
   //if no refresh token is stored, manually generate a new one and put it here
   //you can manually store the refresh token in redis using the key "jumper_refresh_token"
@@ -408,8 +435,8 @@ async function refresh_jumper_tokens(){
   try {
     const response = await axiosInstance.request(config);
     console.log(response.data)
-    client.set("jumper_auth_token",response.data.access_token,{EX: 2000000})
-    client.set("jumper_refresh_token",response.data.refresh_token)
+    await dt_store("jumper_auth_token",response.data.access_token,{EX: 2000000})
+    await dt_store("jumper_refresh_token",response.data.refresh_token)
     return response.data.access_token
   } catch (error) {
     console.log(error);
@@ -428,7 +455,7 @@ async function jumper_fetch_social_channels(){
     }
   };
   try {
-    const response = await axaxiosInstanceios.request(config);
+    const response = await axiosInstance.request(config);
     return response.data
   } catch (error) {
     console.log(error);
@@ -526,9 +553,10 @@ server.listen(port, async () => {
   console.dir(await  jumper_set_subscription(), {depth:9})
 
   //refresh the tokens every midnight
-  const job = schedule.scheduleJob('0 0 * * *', function(){
-    refresh_jumper_tokens()
+  const job = schedule.scheduleJob('0 0 * * *', async function(){
+    await refresh_jumper_tokens()
   });
+
 });
 
 // const localtunnel = require('localtunnel');

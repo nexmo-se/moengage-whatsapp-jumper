@@ -6,7 +6,7 @@ This application creates a middleware to enable Moengages's general connector to
 
 ## **1. Install dependencies:**
 
-    npm install axios dotenv express qs redis morgan p-ratelimit agentkeepalive
+    npm install axios dotenv express qs redis morgan p-ratelimit agentkeepalive datastore_key_file.json
 
 ## **2. Populate “.env”**
 Copy `.env.samp` file as `.env` and put in the values for the following:
@@ -52,6 +52,23 @@ Copy `.env.samp` file as `.env` and put in the values for the following:
 - **FREE_SOCKET_KEEPALIVE**
 	- How long a free socket is kept alive for reuse.
 
+#Datastore Kind
+DT_KIND=
+
+#Project ID for this Datastore
+DT_PROJECT_ID=
+
+#Path of Data Store File
+DT_JSON_PATH=datastore_key_file.json
+
+
+### DATA STORE SETTINGS ###
+- **DT_KIND**
+	- Data Store Kind
+- **DT_PROJECT_ID**
+	- Data Store Project ID (you can find this in the Service Account file json)
+- **DT_JSON_PATH**
+  - This is the Service Account JSON File (you get this from google)
 
 ## 3. Run whatsapp-jumper-connector,js
 

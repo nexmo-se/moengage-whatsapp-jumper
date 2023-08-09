@@ -18,19 +18,19 @@ const axios_error_logger = (url, error) =>{
   if (error.response) {
     // The request was made and the server responded with a status code
     // that falls out of the range of 2xx
-    console.log("Error on",error.response.request.method,"call to:", url);
-    console.log("Error Response Data", error.response.data);
-    console.log("Error Response Status", error.response.status);
-    console.log("Error Response Headers", error.response.headers);
+    console.error("Error on",error.response.request.method,"call to:", url);
+    console.error("Error Response Data", error.response.data);
+    console.error("Error Response Status", error.response.status);
+    console.error("Error Response Headers", error.response.headers);
   } else if (error.request) {
     // The request was made but no response was received
     // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
     // http.ClientRequest in node.js
-    console.log("Error Requesting to URL:", url);
-    console.log({"code":error.code,"IP":error.address,"port":error.port});
+    console.error("Error Requesting to URL:", url);
+    console.error({"code":error.code,"IP":error.address,"port":error.port});
   } else {
     // Something happened in setting up the request that triggered an Error
-    console.log('Error', error.message);
+    console.error('Error', error.message);
   }
   //console.log(error.config);
 }

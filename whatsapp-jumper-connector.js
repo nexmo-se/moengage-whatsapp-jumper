@@ -14,6 +14,27 @@ const schedule = require('node-schedule');
 var morgan = require('morgan')
 const {Datastore} = require('@google-cloud/datastore');
 
+const axios_error_logger = (url, error) =>{
+  if (error.response) {
+    // The request was made and the server responded with a status code
+    // that falls out of the range of 2xx
+    console.log("Error on",error.response.request.method,"call to:", url);
+    console.log("Error Response Data", error.response.data);
+    console.log("Error Response Status", error.response.status);
+    console.log("Error Response Headers", error.response.headers);
+  } else if (error.request) {
+    // The request was made but no response was received
+    // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+    // http.ClientRequest in node.js
+    console.log("Error Requesting to URL:", url);
+    console.log({"code":error.code,"IP":error.address,"port":error.port});
+  } else {
+    // Something happened in setting up the request that triggered an Error
+    console.log('Error', error.message);
+  }
+  //console.log(error.config);
+}
+
 const datastore = new Datastore({
   projectId: process.env.DT_PROJECT_ID,
   keyFilename: process.env.DT_JSON_PATH
@@ -21,8 +42,6 @@ const datastore = new Datastore({
 
  // The kind for the new entity
  const kind = process.env.DT_KIND;
-
-
 
  async function dt_store(key, value, opt={}){
   const taskKey = datastore.key([kind, key]);
@@ -41,6 +60,7 @@ const datastore = new Datastore({
  }
 
 const Agent = require('agentkeepalive');
+const { exit } = require('process');
 const keepAliveAgent = new Agent({
   maxSockets: parseInt(process.env.MAX_SOCKETS),
   maxFreeSockets: parseInt(process.env.MAX_FREE_SOCKETS),
@@ -56,6 +76,9 @@ const httpsKeepAliveAgent = new Agent.HttpsAgent({
 });
 
 const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: httpsKeepAliveAgent});
+
+//pre socialChannels var
+var  socialChannels = null
 
 
 app.use(morgan('combined'))
@@ -156,7 +179,7 @@ app.post('/jumper_callback', async (req, res) => {
         }
         else return res.json({"status":"error","message":"failed sending  callback to moengage"})
       } catch (error) {
-        console.log(error);
+        axios_error_logger(moengage_callback, error)
         return res.json({"status":"error","message":"failed sending callback to moengage"})
       }
     }else if(payload.data.delivered == true){
@@ -180,7 +203,7 @@ app.post('/jumper_callback', async (req, res) => {
         }
         else return res.json({"status":"error","message":"failed sending  callback to moengage"})
       } catch (error) {
-        console.log(error);
+        axios_error_logger(moengage_callback, error)
         return res.json({"status":"error","message":"failed sending callback to moengage"})
       }
     }
@@ -262,13 +285,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
         if(found_language.length>0){
           found=true
           components = null
-          if(data.template.components) components = data.template.components
-
-          // Rate Limiter Code
-          // empty promise to ignite rate limit queue
-          await limiter(() => new Promise((resolve) => {
-            resolve();
-          }));
+          if(data.template.components) components = data.template.components          
 
           const dat = await limiter(() => sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components));
           //
@@ -296,7 +313,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
 //send whatsapp message with template
 async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_components){
   console.log("Message ID from Moengage: ", msg_id)
-  socialChannels = await jumper_fetch_social_channels();
+  
 
   var components = {"HEADER":[],"BODY":[],"BUTTONS":[]}
   if(_components){
@@ -375,7 +392,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
     }
     else return {"status":"error","message":"failed sending message"}
   } catch (error) {
-    console.log(error);
+    axios_error_logger('https://api.jumper.ai/chat/send-message',error)
     return {"status":"error","message":"failed sending message"}
   }
 }
@@ -413,6 +430,8 @@ async function refresh_jumper_tokens(){
   if(token==null){
     console.log("Using seed Refresh Token")
     token = process.env.SEED_REFRESH_TOKEN
+  }else{
+    console.log("Found A recent Refresh token, ",token)
   }
   let data = qs.stringify({
     'refresh_token': token,
@@ -439,7 +458,7 @@ async function refresh_jumper_tokens(){
     await dt_store("jumper_refresh_token",response.data.refresh_token)
     return response.data.access_token
   } catch (error) {
-    console.log(error);
+    axios_error_logger(error)
     return null
   }
 }
@@ -458,7 +477,7 @@ async function jumper_fetch_social_channels(){
     const response = await axiosInstance.request(config);
     return response.data
   } catch (error) {
-    console.log(error);
+    axios_error_logger('https://api.jumper.ai/chat/get-social-channels',error)
     return null
   }
 }
@@ -477,7 +496,7 @@ async function jumper_fetch_templates(){
     const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
-    console.log(error);
+    axios_error_logger('https://api.jumper.ai/chat/fetch-whatsapp-templates',error)
     return null
   }
 }
@@ -517,7 +536,7 @@ async function jumper_set_subscription(){
     const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
-    console.log(error);
+    axios_error_logger(error)
     return null
   }
 }
@@ -527,7 +546,7 @@ async function jumper_fetch_subscriptions(){
   let config = {
     method: 'get',
     maxBodyLength: Infinity,
-    url: 'https://api.jumper.ai/app/list-subscription',
+    url: 'https://api.jumper.ai/app/add-subscription',
     headers: { 
       'Authorization': `Bearer ${await jumper_token()}`
     }
@@ -537,7 +556,7 @@ async function jumper_fetch_subscriptions(){
     const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
-    console.log(error);
+    axios_error_logger('https://api.jumper.ai/app/add-subscription', error)
     return null
   }
 }
@@ -546,10 +565,21 @@ server.on('request', app)
 
 server.listen(port, async () => {
   console.log(`Starting server at port: ${port}`)
-
+  socialChannels = await jumper_fetch_social_channels();
+  console.log("Social Channels Found")
+  console.dir(socialChannels, {depth:9})
+  if(socialChannels==null){
+    console.log("Startup Error: No Social Chanels, Exiting")
+    exit()
+  }
   //refresh tokens on start
   await refresh_jumper_tokens()
   
+  // Rate Limiter Code
+  // empty promise to ignite rate limit queue
+  await limiter(() => new Promise((resolve) => {
+    resolve();
+  }));
   console.dir(await  jumper_set_subscription(), {depth:9})
 
   //refresh the tokens every midnight

@@ -46,8 +46,6 @@ const datastore = new Datastore({
 
  var whatsapp_id = null
 
- var templates = []
-
  async function dt_store(key, value, opt={}){
   const taskKey = datastore.key([kind, key]);
   const task = {
@@ -318,7 +316,9 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
     data = req.body  
     found = false
     //first pass let's check if the template is cached in memory
-    console.log("Look in cached template first")
+    console.log("Look in Data Store Templates first")
+    var templates = await dt_get("templates");
+    if(templates == null) templates = []
     await templates.forEach(async (template) => {
       found_template = findKeyValue(template,"template_name", data.template.name)
       //if we find it, let's look if the language is supported by the template
@@ -327,7 +327,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
           found_language = findKeyValue(template_languge,"language", data.template.language.code)
           //if we find the language, let's send the message
           if(found_language.length>0){
-            console.log("Found the template in cache")
+            console.log("Found the template in Data store")
             found=true
             components = null
             if(data.template.components) components = data.template.components          
@@ -343,8 +343,9 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
 
     //not cached, let's call the fetch template
     if(!found){
-      console.log("Template not in Cache, calling fetch-whatsapp-template")
-      templates = await jumper_fetch_templates();
+      console.log("Template not in Data store, calling fetch-whatsapp-template")
+      var templates = await jumper_fetch_templates();
+      await dt_store("templates", templates);
       await templates.forEach(async (template) => {
         found_template = findKeyValue(template,"template_name", data.template.name)
         //if we find it, let's look if the language is supported by the template

@@ -317,7 +317,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
     found = false
     //first pass let's check if the template is cached in memory
     console.log("Look in Data Store Templates first")
-    var templates = await dt_get("templates");
+    var templates = await dt_get("templates_"+data.template.name);
     if(templates == null) templates = []
     await templates.forEach(async (template) => {
       found_template = findKeyValue(template,"template_name", data.template.name)
@@ -345,7 +345,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
     if(!found){
       console.log("Template not in Data store, calling fetch-whatsapp-template")
       var templates = await jumper_fetch_templates();
-      await dt_store("templates", templates);
+      await dt_store("templates_"+data.template.name, templates);
       await templates.forEach(async (template) => {
         found_template = findKeyValue(template,"template_name", data.template.name)
         //if we find it, let's look if the language is supported by the template

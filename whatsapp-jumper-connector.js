@@ -44,6 +44,10 @@ const datastore = new Datastore({
  // The kind for the new entity
  const kind = process.env.DT_KIND;
 
+ var whatsapp_id = null
+
+ var templates = []
+
  async function dt_store(key, value, opt={}){
   const taskKey = datastore.key([kind, key]);
   const task = {
@@ -78,7 +82,7 @@ const httpsKeepAliveAgent = new Agent.HttpsAgent({
 
 const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: httpsKeepAliveAgent});
 
-var whatsapp_id = null
+
 
 app.use(timeout(process.env.RESPONSE_TIMEOUT || "30s"))
 app.use(morgan('combined'))
@@ -186,8 +190,8 @@ app.post('/moengage_callback', async (req, res) => {
 
 app.get('/list_jumper_templates', async (req, res) => {
   console.log("moengage post",req.body)
-  var templates = await jumper_fetch_templates()
-  res.json(templates)
+  var _templates = await jumper_fetch_templates()
+  res.json(_templates)
 })
 
 app.post('/jumper_callback', async (req, res) => {
@@ -305,13 +309,16 @@ app.get('/jumper_callback', (req, res) => {
 
 app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
   //--> add ratelimit 10 calls per second. Queue the calls
-  console.log("post Whatsapp: ")
-  console.dir(req.body, {depth:9})
-  data = req.body
-  templates = await jumper_fetch_templates();
-  found = false
+ 
 
   await limiter(() =>  (async () => {
+
+    console.log("post Whatsapp: ")
+    console.dir(req.body, {depth:9})
+    data = req.body  
+    found = false
+    //first pass let's check if the template is cached in memory
+    console.log("Look in cached template first")
     await templates.forEach(async (template) => {
       found_template = findKeyValue(template,"template_name", data.template.name)
       //if we find it, let's look if the language is supported by the template
@@ -320,6 +327,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
           found_language = findKeyValue(template_languge,"language", data.template.language.code)
           //if we find the language, let's send the message
           if(found_language.length>0){
+            console.log("Found the template in cache")
             found=true
             components = null
             if(data.template.components) components = data.template.components          
@@ -332,7 +340,34 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
         })
       }
     })
-  
+
+    //not cached, let's call the fetch template
+    if(!found){
+      console.log("Template not in Cache, calling fetch-whatsapp-template")
+      templates = await jumper_fetch_templates();
+      await templates.forEach(async (template) => {
+        found_template = findKeyValue(template,"template_name", data.template.name)
+        //if we find it, let's look if the language is supported by the template
+        if(found_template.length>0){
+          await template.templates.forEach(async (template_languge) => {
+            found_language = findKeyValue(template_languge,"language", data.template.language.code)
+            //if we find the language, let's send the message
+            if(found_language.length>0){
+              console.log("Found the template in fresh call to fetch-whatsapp-template")
+              found=true
+              components = null
+              if(data.template.components) components = data.template.components          
+              
+              const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components);
+              //
+              
+              return res.json(dat).end
+            }
+          })
+        }
+      })
+    }
+
     if(!found){
       mes = {
         "status": "failure",

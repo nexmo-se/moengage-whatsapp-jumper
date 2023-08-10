@@ -81,7 +81,7 @@ const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: https
 //pre socialChannels var
 var  socialChannels = null
 
-app.use(timeout(process.env.RESPONSE_TIMEOUT))
+app.use(timeout(process.env.RESPONSE_TIMEOUT || "30s"))
 app.use(morgan('combined'))
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

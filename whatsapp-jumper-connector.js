@@ -10,10 +10,10 @@ const {pRateLimit} = require('p-ratelimit');
 const port = process.env.PORT || 3001;
 const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
-const schedule = require('node-schedule');
 var morgan = require('morgan')
 var timeout = require('connect-timeout')
 const {Datastore} = require('@google-cloud/datastore');
+
 
 const axios_error_logger = (url, error) =>{
   if (error.response) {
@@ -81,7 +81,7 @@ const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: https
 //pre socialChannels var
 var  socialChannels = null
 
-app.use(timeout('24s'))
+app.use(timeout(process.env.RESPONSE_TIMEOUT))
 app.use(morgan('combined'))
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -137,9 +137,47 @@ moengage_auth = function(req, res, next) {
   next();
 }
 
+ipWhitelist = async (req, res, next) => {  
+  var invalidMasheryIP = true;
+  var reqIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+  reqIp = reqIp.split(",")
+  var whitelist = await dt_get("whitelist")
+  console.log("Request coming from:",reqIp)
+  for (var i = 0, len = reqIp.length; i < len; i++) {
+    if (whitelist.includes(reqIp[i].trim())){
+      console.log("IP is Whitelisted, Continue")
+      invalidMasheryIP = false;
+      next();
+    }
+  }
+
+  if (invalidMasheryIP) {
+      console.error(`An unauthorized IP address ${reqIp} has tried to access the service`);
+      res.status(403).end();
+  }
+}
 
 app.get('/', (req, res) => {
   res.json(200);
+});
+
+app.get('/refresh_token',ipWhitelist, async (req, res) => {
+  // code to white list url
+  // if url is not white listed then return
+
+
+  let isSuccess = true;
+  try {
+    const response = await  refresh_jumper_tokens();
+    if(!response) {
+     isSuccess = false
+     console.error('failed refresh token:', response);
+    }else{}
+  } catch (e) {
+    console.error(e);
+    isSuccess = false
+  }
+  res.json(req.query,  isSuccess ? 200 : 500);
 });
 
 app.post('/moengage_callback', async (req, res) => {
@@ -546,7 +584,7 @@ async function jumper_fetch_subscriptions(){
   let config = {
     method: 'get',
     maxBodyLength: Infinity,
-    url: 'https://api.jumper.ai/app/add-subscription',
+    url: 'https://api.jumper.ai/app/list-subscription',
     headers: { 
       'Authorization': `Bearer ${await jumper_token()}`
     }
@@ -556,7 +594,7 @@ async function jumper_fetch_subscriptions(){
     const response = await axiosInstance.request(config);    
     return response.data.data
   } catch (error) {
-    axios_error_logger('https://api.jumper.ai/app/add-subscription', error)
+    axios_error_logger('https://api.jumper.ai/app/list-subscription', error)
     return null
   }
 }
@@ -576,7 +614,7 @@ server.listen(port, async () => {
   console.dir(await  jumper_set_subscription(), {depth:9})
     // Rate Limiter Code
   // empty promise to ignite rate limit queue
-  
+
   await limiter(() => new Promise((resolve) => {
     resolve();
   }));

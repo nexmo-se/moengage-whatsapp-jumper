@@ -78,8 +78,7 @@ const httpsKeepAliveAgent = new Agent.HttpsAgent({
 
 const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: httpsKeepAliveAgent});
 
-//pre socialChannels var
-var  socialChannels = null
+var whatsapp_id = null
 
 app.use(timeout(process.env.RESPONSE_TIMEOUT || "30s"))
 app.use(morgan('combined'))
@@ -312,38 +311,45 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
   templates = await jumper_fetch_templates();
   found = false
 
-  //let's look for the template
-  await templates.forEach(async (template) => {
-    found_template = findKeyValue(template,"template_name", data.template.name)
-    //if we find it, let's look if the language is supported by the template
-    if(found_template.length>0){
-      await template.templates.forEach(async (template_languge) => {
-        found_language = findKeyValue(template_languge,"language", data.template.language.code)
-        //if we find the language, let's send the message
-        if(found_language.length>0){
-          found=true
-          components = null
-          if(data.template.components) components = data.template.components          
-
-          const dat = await limiter(() => sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components));
-          //
-          
-          return res.json(dat).end
-        }
-      })
-    }
-  })
-
-  if(!found){
-    mes = {
-      "status": "failure",
-      "error" : {
-      "code" : "01",
-      "message" : "TEMPLATE NOT FOUND"
+  await limiter(() =>  (async () => {
+    await templates.forEach(async (template) => {
+      found_template = findKeyValue(template,"template_name", data.template.name)
+      //if we find it, let's look if the language is supported by the template
+      if(found_template.length>0){
+        await template.templates.forEach(async (template_languge) => {
+          found_language = findKeyValue(template_languge,"language", data.template.language.code)
+          //if we find the language, let's send the message
+          if(found_language.length>0){
+            found=true
+            components = null
+            if(data.template.components) components = data.template.components          
+  
+            const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components);
+            //
+            
+            return res.json(dat).end
+          }
+        })
       }
+    })
+  
+    if(!found){
+      mes = {
+        "status": "failure",
+        "error" : {
+        "code" : "01",
+        "message" : "TEMPLATE NOT FOUND"
+        }
+      }
+      return res.json(mes);
     }
-    return res.json(mes);
-  }
+    
+    })()
+  )
+  ;
+  
+
+  //let's look for the template
   
 });
 
@@ -399,7 +405,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
   console.dir(components, {depth:9})  
 
   let data = qs.stringify({
-    'pageid': socialChannels.whatsapp.id,
+    'pageid': whatsapp_id,
     'conversationid': number,
      'channel':'whatsapp',
      'message':`s3ndt3mpl4te_${template_id}`,
@@ -603,17 +609,15 @@ server.on('request', app)
 
 server.listen(port, async () => {
   console.log(`Starting server at port: ${port}`)
-  socialChannels = await jumper_fetch_social_channels();
-  console.log("Social Channels Found")
-  console.dir(socialChannels, {depth:9})
-  if(socialChannels==null){
-    console.log("Startup Error: No Social Chanels, Exiting")
-    exit()
+  whatsapp_id = await dt_get("whatsapp_id")
+  if(whatsapp_id == null){
+    console.log("No WA ID found, getting from env and storing it")
+    await dt_store("whatsapp_id", process.env.WA_ID)
   }
   
-  console.dir(await  jumper_set_subscription(), {depth:9})
-    // Rate Limiter Code
-  // empty promise to ignite rate limit queue
+  // console.dir(await  jumper_set_subscription(), {depth:9})
+  //   // Rate Limiter Code
+  // // empty promise to ignite rate limit queue
 
   await limiter(() => new Promise((resolve) => {
     resolve();

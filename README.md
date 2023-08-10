@@ -6,7 +6,7 @@ This application creates a middleware to enable Moengages's general connector to
 
 ## **1. Install dependencies:**
 
-    npm install axios dotenv express qs redis morgan p-ratelimit agentkeepalive datastore_key_file.json
+    npm install axios dotenv express qs redis morgan p-ratelimit agentkeepalive connect-timeout
 
 ## **2. Populate “.env”**
 Copy `.env.samp` file as `.env` and put in the values for the following:

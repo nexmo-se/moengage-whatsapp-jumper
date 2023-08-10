@@ -12,6 +12,7 @@ const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 const schedule = require('node-schedule');
 var morgan = require('morgan')
+var timeout = require('connect-timeout')
 const {Datastore} = require('@google-cloud/datastore');
 
 const axios_error_logger = (url, error) =>{
@@ -80,9 +81,10 @@ const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: https
 //pre socialChannels var
 var  socialChannels = null
 
-
+app.use(timeout('24s'))
 app.use(morgan('combined'))
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 //token that Authenticates Moengage
 const _token = process.env.MOENGAGE_AUTH_AGAINST
 const findKeyValue = (obj, key, val) =>
@@ -108,8 +110,6 @@ const limiter = pRateLimit({
 // })();
 
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
 moengage_auth = function(req, res, next) {
   console.log("post",req.body)
   if (!req.headers.authorization) {
@@ -572,20 +572,14 @@ server.listen(port, async () => {
     console.log("Startup Error: No Social Chanels, Exiting")
     exit()
   }
-  //refresh tokens on start
-  await refresh_jumper_tokens()
   
-  // Rate Limiter Code
+  console.dir(await  jumper_set_subscription(), {depth:9})
+    // Rate Limiter Code
   // empty promise to ignite rate limit queue
+  
   await limiter(() => new Promise((resolve) => {
     resolve();
   }));
-  console.dir(await  jumper_set_subscription(), {depth:9})
-
-  //refresh the tokens every midnight
-  const job = schedule.scheduleJob('0 0 * * *', async function(){
-    await refresh_jumper_tokens()
-  });
 
 });
 

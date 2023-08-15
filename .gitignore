@@ -36,3 +36,4 @@ Thumbs.db
 *.wmv
 .env
 .firebase/*.cache
+datastore_key_file_local.json

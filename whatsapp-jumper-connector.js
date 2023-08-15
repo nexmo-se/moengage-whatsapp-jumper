@@ -36,31 +36,37 @@ const axios_error_logger = (url, error) =>{
   //console.log(error.config);
 }
 
-const datastore = new Datastore({
+const datastoreDetails = {
   projectId: process.env.DT_PROJECT_ID,
-  keyFilename: process.env.DT_JSON_PATH
-});
+};
 
- // The kind for the new entity
- const kind = process.env.DT_KIND;
+// code to connect from local
+if (process.env.DT_JSON_PATH) {
+  datastoreDetails.keyFilename = process.env.DT_JSON_PATH;
+}
 
- var whatsapp_id = null
+const datastore = new Datastore(datastoreDetails);
 
- async function dt_store(key, value, opt={}){
-  const taskKey = datastore.key([kind, key]);
-  const task = {
-    key: taskKey,
-    data: {value: value},
-  };
-  await datastore.save(task);
- }
+// The kind for the new entity
+const kind = process.env.DT_KIND;
 
- async function dt_get(key){
-  const taskKey = datastore.key([kind, key]);
-  const task = await datastore.get(taskKey)
-  if(task[0]==undefined) return null
-  return task[0].value
- }
+var whatsapp_id = null
+
+async function dt_store(key, value, opt={}){
+const taskKey = datastore.key([kind, key]);
+const task = {
+  key: taskKey,
+  data: {value: value},
+};
+await datastore.save(task);
+}
+
+async function dt_get(key){
+const taskKey = datastore.key([kind, key]);
+const task = await datastore.get(taskKey)
+if(task[0]==undefined) return null
+return task[0].value
+}
 
 const Agent = require('agentkeepalive');
 const { exit } = require('process');

@@ -19,10 +19,16 @@ const axios_error_logger = (url, error) =>{
   }
 }
 
-const datastore = new Datastore({
+const datastoreDetails = {
   projectId: process.env.DT_PROJECT_ID,
-  keyFilename: process.env.DT_JSON_PATH
-});
+};
+
+// code to connect from local
+if (process.env.DT_JSON_PATH) {
+  datastoreDetails.keyFilename = process.env.DT_JSON_PATH;
+}
+
+const datastore = new Datastore(datastoreDetails);
 
  // The kind for the new entity
  const kind = process.env.DT_KIND;

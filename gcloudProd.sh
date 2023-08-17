@@ -1,6 +1,6 @@
 # for latest docker image run "npm run docker" 
 
-export PROJECT_ID=jumperdevnew                                                  
+export PROJECT_ID=jumper-147806
 export REGION=us-central1
 export SERVICENAME=moengage
 

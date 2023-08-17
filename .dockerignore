@@ -2,3 +2,5 @@ node_modules
 npm-debug.log
 Dockerfile
 package-lock.json
+datastore_key_file_local.json
+.env

@@ -12,18 +12,18 @@ const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 var morgan = require('morgan')
 var timeout = require('connect-timeout')
-const {Datastore} = require('@google-cloud/datastore');
+const { Datastore } = require('@google-cloud/datastore');
 
 
-const axios_error_logger = (url, error) =>{
-  if (error.response) {
+const axios_error_logger = (url, error) => {
+  if (error && error.response) {
     // The request was made and the server responded with a status code
     // that falls out of the range of 2xx
     console.error("Error on",error.response.request.method,"call to:", url);
     console.error("Error Response Data", error.response.data);
     console.error("Error Response Status", error.response.status);
     console.error("Error Response Headers", error.response.headers);
-  } else if (error.request) {
+  } else if (error && error.request) {
     // The request was made but no response was received
     // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
     // http.ClientRequest in node.js
@@ -31,7 +31,7 @@ const axios_error_logger = (url, error) =>{
     console.error({"code":error.code,"IP":error.address,"port":error.port});
   } else {
     // Something happened in setting up the request that triggered an Error
-    console.error('Error', error.message);
+    console.error('Error', error && error.message || error);
   }
   //console.log(error.config);
 }
@@ -168,7 +168,7 @@ app.get('/', (req, res) => {
   res.json(200);
 });
 
-app.get('/refresh_token',ipWhitelist, async (req, res) => {
+app.get('/refresh_token', async (req, res) => {
   // code to white list url
   // if url is not white listed then return
 
@@ -497,10 +497,10 @@ async function jumper_token(){
   }
 
   //If we no token is stored, means it's either expired or first use
-  if(val==null){
+  // if(val==null){
 
-    refresh_jumper_tokens()
-  }
+  //   refresh_jumper_tokens()
+  // }
 }
 
 
@@ -513,7 +513,7 @@ async function refresh_jumper_tokens(){
   
   //if no refresh token is stored, manually generate a new one and put it here
   //you can manually store the refresh token in redis using the key "jumper_refresh_token"
-  if(token==null){
+  if (token == null) {
     console.log("Using seed Refresh Token")
     token = process.env.SEED_REFRESH_TOKEN
   }else{
@@ -544,6 +544,7 @@ async function refresh_jumper_tokens(){
     await dt_store("jumper_refresh_token",response.data.refresh_token)
     return response.data.access_token
   } catch (error) {
+    console.error(error);
     axios_error_logger(error)
     return null
   }

@@ -321,10 +321,10 @@ app.post('/send_whatsapp', moengage_auth, async (req, res) => {
 
   try {
     await addTask(project, queue, location, payload);
-    res.status(200).send({success: true});
+    res.status(200).send({status: "success"});
   } catch (error) {
     console.error(error);
-    res.status(500).send(error);
+    res.status(500).send({message: error});
   }
 })
 

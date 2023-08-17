@@ -13,6 +13,7 @@ const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 var morgan = require('morgan')
 var timeout = require('connect-timeout')
 const { Datastore } = require('@google-cloud/datastore');
+const {addTask} = require('./http_task_que')
 
 
 const axios_error_logger = (url, error) => {
@@ -118,7 +119,8 @@ const limiter = pRateLimit({
 
 
 moengage_auth = function(req, res, next) {
-  console.log("post",req.body)
+  console.log("call moengage_auth post", JSON.stringify(req.body))
+  
   if (!req.headers.authorization) {
     mes = {
       "status": "failure",
@@ -144,7 +146,7 @@ moengage_auth = function(req, res, next) {
   next();
 }
 
-ipWhitelist = async (req, res, next) => {  
+ipWhitelist = async (req, res, next) => {
   var invalidMasheryIP = true;
   var reqIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   reqIp = reqIp.split(",")
@@ -311,14 +313,28 @@ app.get('/jumper_callback', (req, res) => {
   res.json(req.query, 200);
 });
 
+app.post('/send_whatsapp', moengage_auth, async (req, res) => {
+  const project = process.env.DT_PROJECT_ID;
+  const queue = process.env.QUEUE_NAME;
+  const location = process.env.QUEUE_LOCATION;
+  const payload = JSON.stringify(req.body);
+
+  try {
+    await addTask(project, queue, location, payload);
+    res.status(200).send({status: "success"});
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({message: error});
+  }
+})
+
 app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
   //--> add ratelimit 10 calls per second. Queue the calls
- 
 
-  await limiter(() =>  (async () => {
 
-    console.log("post Whatsapp: ")
-    console.dir(req.body, {depth:9})
+  // await limiter(() =>  (async () => {
+
+    console.log("post Whatsapp: ", JSON.stringify(req.body));
     data = req.body  
     found = false
     //first pass let's check if the template is cached in memory
@@ -386,9 +402,9 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
       return res.json(mes);
     }
     
-    })()
-  )
-  ;
+  //   })()
+  // )
+  // ;
   
 
   //let's look for the template
@@ -662,9 +678,9 @@ server.listen(port, async () => {
   //   // Rate Limiter Code
   // // empty promise to ignite rate limit queue
 
-  await limiter(() => new Promise((resolve) => {
-    resolve();
-  }));
+  // await limiter(() => new Promise((resolve) => {
+  //   resolve();
+  // }));
 
 });
 

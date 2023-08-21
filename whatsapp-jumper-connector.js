@@ -12,8 +12,8 @@ const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 var morgan = require('morgan')
 var timeout = require('connect-timeout')
-const { Datastore } = require('@google-cloud/datastore');
 const {addTask} = require('./http_task_que')
+const {getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id} = require('./datastore');
 
 
 const axios_error_logger = (url, error) => {
@@ -37,37 +37,10 @@ const axios_error_logger = (url, error) => {
   //console.log(error.config);
 }
 
-const datastoreDetails = {
-  projectId: process.env.DT_PROJECT_ID,
-};
-
-// code to connect from local
-if (process.env.DT_JSON_PATH) {
-  datastoreDetails.keyFilename = process.env.DT_JSON_PATH;
-}
-
-const datastore = new Datastore(datastoreDetails);
-
 // The kind for the new entity
 const kind = process.env.DT_KIND;
 
 var whatsapp_id = null
-
-async function dt_store(key, value, opt={}){
-const taskKey = datastore.key([kind, key]);
-const task = {
-  key: taskKey,
-  data: {value: value},
-};
-await datastore.save(task);
-}
-
-async function dt_get(key){
-const taskKey = datastore.key([kind, key]);
-const task = await datastore.get(taskKey)
-if(task[0]==undefined) return null
-return task[0].value
-}
 
 const Agent = require('agentkeepalive');
 const { exit } = require('process');
@@ -150,7 +123,7 @@ ipWhitelist = async (req, res, next) => {
   var invalidMasheryIP = true;
   var reqIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   reqIp = reqIp.split(",")
-  var whitelist = await dt_get("whitelist")
+  var whitelist = await get_whitelist()
   console.log("Request coming from:",reqIp)
   for (var i = 0, len = reqIp.length; i < len; i++) {
     if (whitelist.includes(reqIp[i].trim())){
@@ -202,7 +175,7 @@ app.get('/list_jumper_templates', async (req, res) => {
 
 app.post('/jumper_callback', async (req, res) => {
   console.log("post Callback: ")
-  console.dir(req.body, {depth:9})
+  console.log(JSON.stringify(req.body))
   payload = req.body.event
   if(payload.subscription_type=="livechat"){
     if(!payload.data.agent){ //means it's from the user
@@ -267,9 +240,15 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
   var tid = null
   if (replytomessage){
     tid = replytomessage.message.split("_")[1]
-    waba_number = await dt_get("conv_id_waba_"+replytomessage.conversationid)
-    moengage_msg_id = await dt_get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
-    template_id = await dt_get("conv_id_moengage_template_id_"+replytomessage.conversationid)
+    const messageDetails = await get_message_by_conv_id(replytomessage.conversationid);
+    console.log('conversationid:' + replytomessage.conversationid);
+    console.log(JSON.stringify(messageDetails));
+    waba_number = messageDetails.mo_waba_number;
+    moengage_msg_id = messageDetails.mo_msg_id;
+    template_id = messageDetails.mo_template_id;
+    // waba_number = await dt_get("conv_id_waba_"+replytomessage.conversationid)
+    // moengage_msg_id = await dt_get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
+    // template_id = await dt_get("conv_id_moengage_template_id_"+replytomessage.conversationid)
   }
   
   console.log("Template ID:",template_id)
@@ -296,7 +275,9 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
 }
 
 async function create_moengage_dlr(message_id, status){
-  var moengage_msg_id = await dt_get("message_id_"+message_id)
+  // var moengage_msg_id = await dt_get("message_id_" + message_id);
+  const message = get_message_by_wa_message_id({ wa_message_id: message_id })
+  const moengage_msg_id = message.mo_msg_id
   return {
     "statuses": [
         {
@@ -329,18 +310,20 @@ app.post('/send_whatsapp', moengage_auth, async (req, res) => {
 })
 
 app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
-  //--> add ratelimit 10 calls per second. Queue the calls
 
-
-  // await limiter(() =>  (async () => {
-
+  try {
     console.log("post Whatsapp: ", JSON.stringify(req.body));
-    data = req.body  
+    const campaign_id = req.query.campaign_id;
+    data = req.body
     found = false
-    //first pass let's check if the template is cached in memory
-    console.log("Look in Data Store Templates first")
-    var templates = await dt_get("templates_"+data.template.name);
-    if(templates == null) templates = []
+
+    let templates = await get_templates(); // get templates cached in store
+    if (!templates || !templates.length) {
+      console.log('fetch templates');
+      templates = await jumper_fetch_templates();
+      await store_templates({templates})
+    }
+    
     await templates.forEach(async (template) => {
       found_template = findKeyValue(template,"template_name", data.template.name)
       //if we find it, let's look if the language is supported by the template
@@ -349,12 +332,11 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
           found_language = findKeyValue(template_languge,"language", data.template.language.code)
           //if we find the language, let's send the message
           if(found_language.length>0){
-            console.log("Found the template in Data store")
             found=true
             components = null
             if(data.template.components) components = data.template.components          
-  
-            const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components);
+
+            const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components, campaign_id);
             //
             
             return res.json(dat).end
@@ -362,34 +344,6 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
         })
       }
     })
-
-    //not cached, let's call the fetch template
-    if(!found){
-      console.log("Template not in Data store, calling fetch-whatsapp-template")
-      var templates = await jumper_fetch_templates();
-      await dt_store("templates_"+data.template.name, templates);
-      await templates.forEach(async (template) => {
-        found_template = findKeyValue(template,"template_name", data.template.name)
-        //if we find it, let's look if the language is supported by the template
-        if(found_template.length>0){
-          await template.templates.forEach(async (template_languge) => {
-            found_language = findKeyValue(template_languge,"language", data.template.language.code)
-            //if we find the language, let's send the message
-            if(found_language.length>0){
-              console.log("Found the template in fresh call to fetch-whatsapp-template")
-              found=true
-              components = null
-              if(data.template.components) components = data.template.components          
-              
-              const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components);
-              //
-              
-              return res.json(dat).end
-            }
-          })
-        }
-      })
-    }
 
     if(!found){
       mes = {
@@ -399,21 +353,24 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
         "message" : "TEMPLATE NOT FOUND"
         }
       }
-      return res.json(mes);
+      return res.status(500).send(mes);
     }
-    
-  //   })()
-  // )
-  // ;
-  
-
-  //let's look for the template
+  } catch (error) {
+    mes = {
+      "status": "failure",
+      "error" : {
+        "code" : "01",
+        "message" : error
+      }
+    }
+    return res.status(500).send(mes);
+  }
   
 });
 
 
 //send whatsapp message with template
-async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_components){
+async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_components, campaign_id){
   console.log("Message ID from Moengage: ", msg_id)
   
 
@@ -460,7 +417,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
   }
 
   console.log("Generated Components")
-  console.dir(components, {depth:9})  
+  console.dir(components, {depth:9})
 
   let data = qs.stringify({
     'pageid': whatsapp_id,
@@ -470,7 +427,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
      'messagetype':"template",
      'message_params':JSON.stringify(components)
   });
-  console.log("Data to be sent:", data)
+  console.log("Data to be sent:", JSON.stringify(data))
   let config = {
     method: 'post',
     maxBodyLength: Infinity,
@@ -484,12 +441,23 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
 
   try {
     const response = await axiosInstance.request(config);
-    console.log(response.data)
+    console.log(JSON.stringify(response.data))
     if (response.data.success == true){
-      await dt_store("message_id_"+response.data.message_id, msg_id, {EX: 604800})
-      await dt_store("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
-      await dt_store("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
-      await dt_store("conv_id_moengage_template_id_"+response.data.conversationid, template_id, {EX: 604800})
+      // await dt_store("message_id_"+response.data.message_id, msg_id, {EX: 604800})
+      // await dt_store("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
+      // await dt_store("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
+      // await dt_store("conv_id_moengage_template_id_" + response.data.conversationid, template_id, { EX: 604800 })
+
+      const message = {
+        mo_msg_id: msg_id,
+        mo_waba_number: waba_number,
+        mo_template_id: template_id,
+        wa_message_id: response.data.message_id,
+        wa_conv_id: response.data.conversationid,
+        campaign_id: campaign_id || ''
+      }
+
+      await store_message(message)
       return {"status":"success","message":response.data}
     }
     else return {"status":"error","message":"failed sending message"}
@@ -504,11 +472,12 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
 async function jumper_token(){
 
   //get the auth token stored in redis
-  var val = await dt_get("jumper_auth_token")
+  // var val = await dt_get("jumper_auth_token")
+  var val = await getAuthToken();
 
   //if we find the token, let's use it
   if (val){
-    console.log("auth_token_found: ",val)
+    console.log("auth_token_found: ")
     return val
   }
 
@@ -522,10 +491,12 @@ async function jumper_token(){
 
 //refresh token function
 
-async function refresh_jumper_tokens(){
+async function refresh_jumper_tokens() {
+
   //let's try getting our stored refresh token to generate a new auth
   console.log("Refreshing token")
-  token = await dt_get("jumper_refresh_token")
+  // token = await dt_get("jumper_refresh_token")
+  token = await getRefreshToken();
   
   //if no refresh token is stored, manually generate a new one and put it here
   //you can manually store the refresh token in redis using the key "jumper_refresh_token"
@@ -546,7 +517,7 @@ async function refresh_jumper_tokens(){
     method: 'post',
     maxBodyLength: Infinity,
     url: 'https://api.jumper.ai/oauth/refresh',
-    headers: { 
+    headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Authorization': process.env.JUMPER_BASIC_AUTH
     },
@@ -556,9 +527,11 @@ async function refresh_jumper_tokens(){
   try {
     const response = await axiosInstance.request(config);
     console.log(response.data)
-    await dt_store("jumper_auth_token",response.data.access_token,{EX: 2000000})
-    await dt_store("jumper_refresh_token",response.data.refresh_token)
-    return response.data.access_token
+    // await dt_store("jumper_auth_token",response.data.access_token,{EX: 2000000})
+    // await dt_store("jumper_refresh_token", response.data.refresh_token)
+    await store_auth_token({ auth_token: response.data.access_token});
+    await store_refresh_token({ refresh_token: response.data.refresh_token});
+    return response.data.access_token;
   } catch (error) {
     console.error(error);
     axios_error_logger(error)
@@ -668,10 +641,12 @@ server.on('request', app)
 
 server.listen(port, async () => {
   console.log(`Starting server at port: ${port}`)
-  whatsapp_id = await dt_get("whatsapp_id")
+  // whatsapp_id = await dt_get("whatsapp_id")
+  whatsapp_id = await get_wa_id();
   if(whatsapp_id == null){
-    console.log("No WA ID found, getting from env and storing it")
-    await dt_store("whatsapp_id", process.env.WA_ID)
+    console.log("No WA ID found, getting from env and storing it", process.env.WA_ID)
+    // await dt_store("whatsapp_id", process.env.WA_ID)
+    await store_wa_id({ whatsapp_id: process.env.WA_ID})
   }
   
   // console.dir(await  jumper_set_subscription(), {depth:9})

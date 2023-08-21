@@ -175,7 +175,7 @@ app.get('/list_jumper_templates', async (req, res) => {
 
 app.post('/jumper_callback', async (req, res) => {
   console.log("post Callback: ")
-  console.dir(req.body, {depth:9})
+  console.log(JSON.stringify(req.body))
   payload = req.body.event
   if(payload.subscription_type=="livechat"){
     if(!payload.data.agent){ //means it's from the user
@@ -241,6 +241,8 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
   if (replytomessage){
     tid = replytomessage.message.split("_")[1]
     const messageDetails = await get_message_by_conv_id(replytomessage.conversationid);
+    console.log('conversationid:' + replytomessage.conversationid);
+    console.log(JSON.stringify(messageDetails));
     waba_number = messageDetails.mo_waba_number;
     moengage_msg_id = messageDetails.mo_msg_id;
     template_id = messageDetails.mo_template_id;
@@ -274,7 +276,7 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
 
 async function create_moengage_dlr(message_id, status){
   // var moengage_msg_id = await dt_get("message_id_" + message_id);
-  const message = get_message_by_wa_message_id({ wa_message_id })
+  const message = get_message_by_wa_message_id({ wa_message_id: message_id })
   const moengage_msg_id = message.mo_msg_id
   return {
     "statuses": [

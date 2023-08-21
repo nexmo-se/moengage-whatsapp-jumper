@@ -67,14 +67,14 @@ const get_wa_id = async () => {
 };
 
 const get_message_by_conv_id = async ({ wa_conv_id }) => {
-  const data = await dt_get({kind:'MOENGAGE_MESSAGES', key: wa_conv_id});
+  const data = await queryMOengageMessages.filter('wa_conv_id', wa_conv_id)
   if (data && data.length && data[0]) {
     return data[0];
   }
 };
 
 const get_message_by_wa_message_id = async ({wa_message_id}) => {
-  const data = await queryMOengageMessages.filter('wa_message_id', wa_message_id)
+  const data = await dt_get({ kind: 'MOENGAGE_MESSAGES', key: wa_message_id });
   if (data && data.length && data[0]) {
     return data[0];
   }
@@ -129,7 +129,8 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
     created_date: currentDateTimeIso(),
     campaign_id,
   }
-  return await dt_store({kind: 'MOENGAGE_MESSAGES', key:wa_conv_id, data});
+  console.log(JSON.stringify(data));
+  return await dt_store({kind: 'MOENGAGE_MESSAGES', key:wa_message_id, data});
 };
 
 module.exports = {dt_store, dt_get, getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};

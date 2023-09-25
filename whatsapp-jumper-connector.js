@@ -421,13 +421,14 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
 
   let data = qs.stringify({
     'pageid': whatsapp_id,
-    'conversationid': number,
+    // 'conversationid': number,
+    'to': number,
      'channel':'whatsapp',
      'message':`s3ndt3mpl4te_${template_id}`,
      'messagetype':"template",
      'message_params':JSON.stringify(components)
   });
-  console.log("Data to be sent:", JSON.stringify(data))
+  console.log("Data to be sent:", data)
   let config = {
     method: 'post',
     maxBodyLength: Infinity,

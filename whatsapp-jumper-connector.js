@@ -313,37 +313,35 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
 
   try {
     console.log("post Whatsapp: ", JSON.stringify(req.body));
-    const campaign_id = req.query.campaign_id;
-    data = req.body
-    found = false
+    let campaign_id = req.query.campaign_id, data = req.body, found = false;
 
     let templates = await get_templates(); // get templates cached in store
-    if (!templates || !templates.length) {
+    let foundTemplate = templates?.find(t => t.template_name == data.template.name)
+
+    if (!templates?.length || !foundTemplate) {
       console.log('fetch templates');
       templates = await jumper_fetch_templates();
       await store_templates({templates})
     }
-    
-    await templates.forEach(async (template) => {
-      found_template = findKeyValue(template,"template_name", data.template.name)
-      //if we find it, let's look if the language is supported by the template
-      if(found_template.length>0){
-        await template.templates.forEach(async (template_languge) => {
-          found_language = findKeyValue(template_languge,"language", data.template.language.code)
-          //if we find the language, let's send the message
-          if(found_language.length>0){
-            found=true
-            components = null
-            if(data.template.components) components = data.template.components          
 
-            const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components, campaign_id);
-            //
-            
-            return res.json(dat).end
-          }
-        })
-      }
-    })
+    foundTemplate = templates.find(t => t.template_name == data.template.name)
+
+    //if we find it, let's look if the language is supported by the template
+    if(foundTemplate){
+      await foundTemplate.templates.forEach(async (template_language) => {
+        const foundLanguage = findKeyValue(template_language, "language", data.template?.language?.code)
+
+        //if we find the language, let's send the message
+        if(foundLanguage.length>0){
+          found = true;
+          let components = null;
+          if(data.template.components) components = data.template.components
+
+          const dat = await sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id);
+          return res.json(dat).end
+        }
+      })
+    }
 
     if(!found){
       mes = {

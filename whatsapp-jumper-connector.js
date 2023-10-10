@@ -4,8 +4,6 @@ const express = require('express');
 const app = express();
 const server = require('http').createServer();
 const qs = require('qs');
-const {pRateLimit} = require('p-ratelimit');
-//const client = require("redis").createClient(6379, "127.0.0.1") //
 const port = process.env.PORT || 3001;
 const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
@@ -13,7 +11,7 @@ var morgan = require('morgan')
 var timeout = require('connect-timeout')
 const {addTask} = require('./http_task_que')
 const {getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id} = require('./datastore');
-const { postFormData, axios_error_logger, axiosInstancem, updateStatusToMoEngage } = require('./api');
+const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('./api');
 
 // The kind for the new entity
 const kind = process.env.DT_KIND;
@@ -30,24 +28,6 @@ const _token = process.env.MOENGAGE_AUTH_AGAINST
 const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
 
-
-//Rate Limiter Code
-const limiter = pRateLimit({
-  interval: 500, // 1000 ms == 1 second
-  rate: parseInt(process.env.RATE_PER_SECOND), // 10 API calls per interval
-  concurrency: parseInt(process.env.CONCURRENT_API_CALLS), // no more than 10 running at once
-  maxDelay: Math.ceil( (60 * 1000) * 60), // an API call delayed > 2 sec is rejected
-});
-
-
-// (async () => {
-//   try {
-//     client.on('error', err => console.log('Redis Client Error', err));
-//     await client.connect();
-//   } catch (err) {
-//     console.log(err);
-//   }
-// })();
 
 
 moengage_auth = function(req, res, next) {
@@ -133,28 +113,35 @@ app.get('/list_jumper_templates', async (req, res) => {
 })
 
 function getStatus(req) {
-  const { data, subscription_type, type } = req.body.event;
-  console.log('data', JSON.stringify(data))
-  let status = '', wa_message_id = '';
-  if (type == 'UPDATE' && subscription_type == 'livechat') {
+  try {
+    const { data, subscription_type, type } = req.body.event;
+    console.log('data', JSON.stringify(data))
+    let status = '', wa_message_id = '';
+    if (type == 'UPDATE' && subscription_type == 'livechat') {
 
-    // code to extract sent and delivered status
-    status = data?.entry[0]?.changes[0]?.value?.statuses[0]?.status;
-    if (status) {
-      wa_message_id = data?.entry[0]?.changes[0]?.value?.statuses[0]?.id;
-      return {status, wa_message_id};
-    }
-
-    // code to extract rejected status
-    status = data?.status;
-    if (status) {
-      wa_message_id = data?.message_uuid;
-      if (status == 'rejected' || status == 'reject') {
-        status = "failed"
+      // code to extract rejected status
+      status = data?.status;
+      if (status) {
+        wa_message_id = data?.message_uuid;
+        if (status == 'rejected' || status == 'reject') {
+          status = "failed"
+        }
+        return {status, wa_message_id};
       }
-      return {status, wa_message_id};
+
+      // code to extract sent and delivered status
+      status = data?.entry[0]?.changes[0]?.value?.statuses[0]?.status;
+      if (status) {
+        wa_message_id = data?.entry[0]?.changes[0]?.value?.statuses[0]?.id;
+        return {status, wa_message_id};
+      }
+      
+    } else {
+      return {}
     }
-  } else {
+
+  } catch (error) {
+    console.error('error:', JSON.stringify(error));
     return {}
   }
 }
@@ -650,14 +637,6 @@ server.listen(port, async () => {
     // await dt_store("whatsapp_id", process.env.WA_ID)
     await store_wa_id({ whatsapp_id: process.env.WA_ID})
   }
-  
-  // console.dir(await  jumper_set_subscription(), {depth:9})
-  //   // Rate Limiter Code
-  // // empty promise to ignite rate limit queue
-
-  // await limiter(() => new Promise((resolve) => {
-  //   resolve();
-  // }));
 
 });
 

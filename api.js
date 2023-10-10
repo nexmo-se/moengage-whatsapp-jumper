@@ -87,7 +87,7 @@ const axios_error_logger = (url, error) => {
 }
 
 const updateStatusToMoEngage = async function(messageStatus, wa_message_id) {
-  const { mo_msg_id } = await get_message_by_wa_message_id({ wa_message_id })
+  const { mo_msg_id } = await get_message_by_wa_message_id({ wa_message_id }) || {};
   if (mo_msg_id) {
     console.log('MoEngage Message Id Found by wa_message_id:' + wa_message_id)
     const data = {

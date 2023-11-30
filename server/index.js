@@ -9,7 +9,7 @@ const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 var morgan = require('morgan')
 var timeout = require('connect-timeout')
-const {addTask} = require('./http_task_que')
+const {addTask} = require('../controllers/taskQueue')
 const jwt = require('jsonwebtoken');
 const {getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id} = require('./datastore');
 const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('./api');
@@ -24,6 +24,9 @@ app.use(timeout(process.env.RESPONSE_TIMEOUT || "30s"))
 app.use(morgan('combined'))
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(cors());
+app.use(require('../router'));
+
 //token that Authenticates Moengage
 const _token = process.env.MOENGAGE_AUTH_AGAINST
 const findKeyValue = (obj, key, val) =>
@@ -59,43 +62,23 @@ moengage_auth = function(req, res, next) {
   next();
 }
 
-ipWhitelist = async (req, res, next) => {
-  var invalidMasheryIP = true;
-  var reqIp = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
-  reqIp = reqIp.split(",")
-  var whitelist = await get_whitelist()
-  console.log("Request coming from:",reqIp)
-  for (var i = 0, len = reqIp.length; i < len; i++) {
-    if (whitelist.includes(reqIp[i].trim())){
-      console.log("IP is Whitelisted, Continue")
-      invalidMasheryIP = false;
-      next();
-    }
-  }
-
-  if (invalidMasheryIP) {
-      console.error(`An unauthorized IP address ${reqIp} has tried to access the service`);
-      res.status(403).end();
-  }
-}
-
 app.get('/', (req, res) => {
   res.json(200);
 });
 
-app.post("/generateToken", (req, res) => {
-  try {
-    const { userId, token } = req.body; 
-    let data = {
-        time: Date(),
-        userId: userId,
-    } 
-    const generatedToken = jwt.sign(data, token);
-    res.status(200).send({token: generatedToken});
-  } catch (error) {
-    res.status(500).send({ error: JSON.stringify(error) });
-  }
-});
+// app.post("/generateToken", (req, res) => {
+//   try {
+//     const { userId, token } = req.body; 
+//     let data = {
+//         time: Date(),
+//         userId: userId,
+//     } 
+//     const generatedToken = jwt.sign(data, token);
+//     res.status(200).send({token: generatedToken});
+//   } catch (error) {
+//     res.status(500).send({ error: JSON.stringify(error) });
+//   }
+// });
 
 app.get('/refresh_token', async (req, res) => {
   // code to white list url
@@ -438,8 +421,7 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
       message: `s3ndt3mpl4te_${template_id}`,
       messagetype: 'template',
     // message_params:  JSON.stringify( {'HEADER':[],'BODY':[{'1':'text'}],'BUTTONS':[{'type':'button','sub_type':'url','index':0,'parameters':[{'type':'text','text':'/order/1234'}]}]}),
-      message_params: JSON.stringify(components),
-      source: 'moengage'
+      message_params: JSON.stringify(components)
     };
 
   try {

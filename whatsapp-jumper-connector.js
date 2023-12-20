@@ -3,10 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const app = express();
 const server = require('http').createServer();
-const axios = require('axios');
 const qs = require('qs');
-const {pRateLimit} = require('p-ratelimit');
-//const client = require("redis").createClient(6379, "127.0.0.1") //
 const port = process.env.PORT || 3001;
 const callback_url =process.env.SUBSCRIBED_CALLBACK_URL
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
@@ -14,52 +11,12 @@ var morgan = require('morgan')
 var timeout = require('connect-timeout')
 const {addTask} = require('./http_task_que')
 const {getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id} = require('./datastore');
-
-
-const axios_error_logger = (url, error) => {
-  if (error && error.response) {
-    // The request was made and the server responded with a status code
-    // that falls out of the range of 2xx
-    console.error("Error on",error.response.request.method,"call to:", url);
-    console.error("Error Response Data", error.response.data);
-    console.error("Error Response Status", error.response.status);
-    console.error("Error Response Headers", error.response.headers);
-  } else if (error && error.request) {
-    // The request was made but no response was received
-    // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
-    // http.ClientRequest in node.js
-    console.error("Error Requesting to URL:", url);
-    console.error({"code":error.code,"IP":error.address,"port":error.port});
-  } else {
-    // Something happened in setting up the request that triggered an Error
-    console.error('Error', error && error.message || error);
-  }
-  //console.log(error.config);
-}
+const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('./api');
 
 // The kind for the new entity
 const kind = process.env.DT_KIND;
 
 var whatsapp_id = null
-
-const Agent = require('agentkeepalive');
-const { exit } = require('process');
-const keepAliveAgent = new Agent({
-  maxSockets: parseInt(process.env.MAX_SOCKETS),
-  maxFreeSockets: parseInt(process.env.MAX_FREE_SOCKETS),
-  timeout: parseInt(process.env.SOCKET_TIMEOUT), // active socket keepalive for 60 seconds
-  freeSocketTimeout: parseInt(process.env.FREE_SOCKET_KEEPALIVE), // free socket keepalive for 30 seconds
-});
-
-const httpsKeepAliveAgent = new Agent.HttpsAgent({
-  maxSockets: parseInt(process.env.MAX_SOCKETS),
-  maxFreeSockets: parseInt(process.env.MAX_FREE_SOCKETS),
-  timeout: parseInt(process.env.SOCKET_TIMEOUT), // active socket keepalive for 60 seconds
-  freeSocketTimeout: parseInt(process.env.FREE_SOCKET_KEEPALIVE), // free socket keepalive for 30 seconds
-});
-
-const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: httpsKeepAliveAgent});
-
 
 
 app.use(timeout(process.env.RESPONSE_TIMEOUT || "30s"))
@@ -71,24 +28,6 @@ const _token = process.env.MOENGAGE_AUTH_AGAINST
 const findKeyValue = (obj, key, val) =>
   Object.keys(obj).filter(k => obj[key] === val && k ===key );
 
-
-//Rate Limiter Code
-const limiter = pRateLimit({
-  interval: 500, // 1000 ms == 1 second
-  rate: parseInt(process.env.RATE_PER_SECOND), // 10 API calls per interval
-  concurrency: parseInt(process.env.CONCURRENT_API_CALLS), // no more than 10 running at once
-  maxDelay: Math.ceil( (60 * 1000) * 60), // an API call delayed > 2 sec is rejected
-});
-
-
-// (async () => {
-//   try {
-//     client.on('error', err => console.log('Redis Client Error', err));
-//     await client.connect();
-//   } catch (err) {
-//     console.log(err);
-//   }
-// })();
 
 
 moengage_auth = function(req, res, next) {
@@ -173,10 +112,72 @@ app.get('/list_jumper_templates', async (req, res) => {
   res.json(_templates)
 })
 
+function getStatus(req) {
+  try {
+    const { data, subscription_type, type } = req.body.event;
+    console.log('data', JSON.stringify(data))
+    let status = '', wa_message_id = '';
+    if (type == 'UPDATE' && subscription_type == 'livechat') {
+
+      // code to extract rejected status
+      status = data?.status;
+      if (status) {
+        wa_message_id = data?.message_uuid;
+        if (status == 'rejected' || status == 'reject') {
+          status = "failed"
+        }
+        return {status, wa_message_id};
+      }
+
+      // code to extract sent and delivered status
+      status = data?.entry[0]?.changes[0]?.value?.statuses[0]?.status;
+      if (status) {
+        wa_message_id = data?.entry[0]?.changes[0]?.value?.statuses[0]?.id;
+        return {status, wa_message_id};
+      }
+      
+    } else {
+      return {}
+    }
+
+  } catch (error) {
+    console.error('error:', JSON.stringify(error));
+    return {}
+  }
+}
+
 app.post('/jumper_callback', async (req, res) => {
+  console.log('callback init', JSON.stringify(req.body))
+  const {status, wa_message_id} = getStatus(req);
+  console.log('status:', JSON.stringify({ status, wa_message_id }));
+
+  if(status && wa_message_id) {
+    const response = await updateStatusToMoEngage(status, wa_message_id)
+    const responseData = response?.data;
+    console.log('updateStatusToMoEngage response ', JSON.stringify(responseData));
+    if (responseData.status == "success") {
+      console.log(`${wa_message_id} successfully status updated as ${status}`)
+      return res.json({"status":"success","message":`MoEngage status updated as "${status}" for message id: ${wa_message_id}`})
+    }
+  }
+  console.error(`${wa_message_id} error in status update, status: ${status}, wa_message_id: ${wa_message_id}`);
+  return res.json({ "status": "error", "message": "failed sending  callback to moengage" })
+});
+
+app.post('/jumper_callback_2', async (req, res) => {
+  // sent
+  // submitted
+  // delivered
+  // replied*
+  // rejected
+  // failed
+  // read
+  // reply from agent*
+  
   console.log("post Callback: ")
-  console.log(JSON.stringify(req.body))
-  payload = req.body.event
+  // console.log(JSON.stringify(req.body))
+  let payload = req.body.event
+  console.log( JSON.stringify(payload) )
   if(payload.subscription_type=="livechat"){
     if(!payload.data.agent){ //means it's from the user
       reply_message = await create_moengage_reply(payload.data.messageid, payload.data.conversationid,payload.data.message,payload.data.mobilecountrycode+payload.data.mobile, payload.data.replytomessage)
@@ -192,6 +193,7 @@ app.post('/jumper_callback', async (req, res) => {
         data : data
       };
       try {
+        console.log('call back to moengage livechat', JSON.stringify(config))
         const response = await axiosInstance.request(config);
         console.log(response.data)
         if (response.data.success == true){
@@ -216,6 +218,7 @@ app.post('/jumper_callback', async (req, res) => {
         data : data
       };
       try {
+        console.log('call back to moengage delivered', JSON.stringify(config))
         const response = await axiosInstance.request(config);
         console.log(response.data)
         if (response.data.success == true){
@@ -276,7 +279,9 @@ async function create_moengage_reply(message_id, conv_id, message, to, replytome
 
 async function create_moengage_dlr(message_id, status){
   // var moengage_msg_id = await dt_get("message_id_" + message_id);
-  const message = get_message_by_wa_message_id({ wa_message_id: message_id })
+  console.log('message id', message_id);
+  const message = await get_message_by_wa_message_id({ wa_message_id: message_id })
+  console.log( "delivered message", JSON.stringify(message));
   const moengage_msg_id = message.mo_msg_id
   return {
     "statuses": [
@@ -288,11 +293,6 @@ async function create_moengage_dlr(message_id, status){
       ]
     }
 }
-
-app.get('/jumper_callback', (req, res) => {
-  console.log("get",req.query)
-  res.json(req.query, 200);
-});
 
 app.post('/send_whatsapp', moengage_auth, async (req, res) => {
   const project = process.env.DT_PROJECT_ID;
@@ -309,41 +309,41 @@ app.post('/send_whatsapp', moengage_auth, async (req, res) => {
   }
 })
 
-app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
+app.post('/chat/send-message', moengage_auth, async (req, res) => {
 
   try {
     console.log("post Whatsapp: ", JSON.stringify(req.body));
-    const campaign_id = req.query.campaign_id;
-    data = req.body
-    found = false
+    let campaign_id = req.query.campaign_id, data = req.body, found = false;
 
     let templates = await get_templates(); // get templates cached in store
-    if (!templates || !templates.length) {
+    let foundTemplate = templates?.find(t => t.template_name == data.template.name)
+    // let foundTemplate = templates[0];
+    console.log('found template', JSON.stringify(foundTemplate));
+
+    if (!templates?.length || !foundTemplate) {
       console.log('fetch templates');
       templates = await jumper_fetch_templates();
-      await store_templates({templates})
+      await store_templates({ templates })
+      foundTemplate = templates.find(t => t.template_name == data.template.name)
     }
-    
-    await templates.forEach(async (template) => {
-      found_template = findKeyValue(template,"template_name", data.template.name)
-      //if we find it, let's look if the language is supported by the template
-      if(found_template.length>0){
-        await template.templates.forEach(async (template_languge) => {
-          found_language = findKeyValue(template_languge,"language", data.template.language.code)
-          //if we find the language, let's send the message
-          if(found_language.length>0){
-            found=true
-            components = null
-            if(data.template.components) components = data.template.components          
 
-            const dat = await sendWhatsappMessage(template_languge.id,data.to,data.msg_id, data.from, components, campaign_id);
-            //
-            
-            return res.json(dat).end
-          }
-        })
-      }
-    })
+
+    //if we find it, let's look if the language is supported by the template
+    if(foundTemplate){
+      await foundTemplate.templates.forEach(async (template_language) => {
+        const foundLanguage = findKeyValue(template_language, "language", data.template?.language?.code)
+
+        //if we find the language, let's send the message
+        if(foundLanguage.length>0){
+          found = true;
+          let components = null;
+          if(data.template.components) components = data.template.components
+
+          const dat = await sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id);
+          return res.json(dat).end
+        }
+      })
+    }
 
     if(!found){
       mes = {
@@ -353,9 +353,11 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
         "message" : "TEMPLATE NOT FOUND"
         }
       }
+      console.log("error:", JSON.stringify(mes));
       return res.status(500).send(mes);
     }
   } catch (error) {
+    console.log("error:", JSON.stringify(error));
     mes = {
       "status": "failure",
       "error" : {
@@ -371,10 +373,7 @@ app.post('/jumper_send_whatsapp', moengage_auth, async (req, res) => {
 
 //send whatsapp message with template
 async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_components, campaign_id){
-  console.log("Message ID from Moengage: ", msg_id)
-  
-
-  var components = {"HEADER":[],"BODY":[],"BUTTONS":[]}
+  var components = {'HEADER':[],'BODY':[],'BUTTONS':[]}
   if(_components){
     for(comp of _components){
       if(comp.type=="header"){
@@ -383,17 +382,17 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
           h = {}
           link = params["image"]["link"]
           h[link] = "image"
-          components["HEADER"].push(h)
+          components.HEADER.push(h)
         }        
       }
       if(comp.type=="body"){
         var p = new Array()
         for(params of comp.parameters){
           h = {}
-          if(params["type"]=="text"){
-            text = params["text"]
-            h[""+String(text)] = "text"
-            components["BODY"].push(h)
+          if(params.type=="text"){
+            text = params.text
+            h[text] = "text"
+            components.BODY.push(h)
           }      
         }
       }
@@ -409,41 +408,30 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
         //     }
         //   }
         
-        comp["index"] = Number(comp["index"])
+        comp.index = Number(comp.index)
         
-        components["BUTTONS"].push(comp)
+        components.BUTTONS.push(comp)
       }
     }
   }
 
-  console.log("Generated Components")
-  console.dir(components, {depth:9})
+  console.log(`msg_id:${msg_id} Generated Components`, JSON.stringify(components))
 
-  let data = qs.stringify({
-    'pageid': whatsapp_id,
-    // 'conversationid': number,
-    'to': number,
-     'channel':'whatsapp',
-     'message':`s3ndt3mpl4te_${template_id}`,
-     'messagetype':"template",
-     'message_params':JSON.stringify(components)
-  });
-  console.log("Data to be sent:", data)
-  let config = {
-    method: 'post',
-    maxBodyLength: Infinity,
-    url: 'https://api.jumper.ai/chat/send-message',
-    headers: { 
-      'Content-Type': 'application/x-www-form-urlencoded', 
-      'Authorization': `Bearer ${await jumper_token()}`
-    },
-    data : data
-  };
+  const body = {
+      to: number,
+      channel: 'whatsapp',
+      message: `s3ndt3mpl4te_${template_id}`,
+      messagetype: 'template',
+    // message_params:  JSON.stringify( {'HEADER':[],'BODY':[{'1':'text'}],'BUTTONS':[{'type':'button','sub_type':'url','index':0,'parameters':[{'type':'text','text':'/order/1234'}]}]}),
+      message_params: JSON.stringify(components)
+    };
 
   try {
-    const response = await axiosInstance.request(config);
-    console.log(JSON.stringify(response.data))
-    if (response.data.success == true){
+    const responsePromise = await postFormData('https://api.jumper.ai/chat/send-message', body);
+    // const response = await axiosInstance.request(config);
+    const response = await responsePromise.json();
+    console.log(`msg_id:${msg_id} message send response:`, JSON.stringify(response))
+    if (response.success == true){
       // await dt_store("message_id_"+response.data.message_id, msg_id, {EX: 604800})
       // await dt_store("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
       // await dt_store("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
@@ -453,13 +441,13 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
         mo_msg_id: msg_id,
         mo_waba_number: waba_number,
         mo_template_id: template_id,
-        wa_message_id: response.data.message_id,
-        wa_conv_id: response.data.conversationid,
+        wa_message_id: response.message_id,
+        wa_conv_id: response.conversationid,
         campaign_id: campaign_id || ''
       }
 
       await store_message(message)
-      return {"status":"success","message":response.data}
+      return {"status":"success","message":response}
     }
     else return {"status":"error","message":"failed sending message"}
   } catch (error) {
@@ -564,7 +552,7 @@ async function jumper_fetch_templates(){
   let config = {
     method: 'get',
     maxBodyLength: Infinity,
-    url: 'https://api.jumper.ai/chat/fetch-whatsapp-templates',
+    url: 'https://api.jumper.ai/chat/fetch-whatsapp-templates?limit=all',
     headers: { 
       'Authorization': `Bearer ${await jumper_token()}`
     }
@@ -649,14 +637,6 @@ server.listen(port, async () => {
     // await dt_store("whatsapp_id", process.env.WA_ID)
     await store_wa_id({ whatsapp_id: process.env.WA_ID})
   }
-  
-  // console.dir(await  jumper_set_subscription(), {depth:9})
-  //   // Rate Limiter Code
-  // // empty promise to ignite rate limit queue
-
-  // await limiter(() => new Promise((resolve) => {
-  //   resolve();
-  // }));
 
 });
 

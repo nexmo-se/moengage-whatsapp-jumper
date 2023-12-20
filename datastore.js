@@ -11,7 +11,6 @@ if (process.env.DT_JSON_PATH) {
 }
 
 const datastore = new Datastore(datastoreDetails);
-const queryMOengageMessages = datastore.createQuery('MOENGAGE_MESSAGES');
 
 
 // The kind for the new entity
@@ -67,16 +66,24 @@ const get_wa_id = async () => {
 };
 
 const get_message_by_conv_id = async ({ wa_conv_id }) => {
-  const data = await queryMOengageMessages.filter('wa_conv_id', wa_conv_id)
-  if (data && data.length && data[0]) {
-    return data[0];
+  const queryMOengageMessages = datastore.createQuery('MOENGAGE_MESSAGES');
+  const query = await queryMOengageMessages.filter('wa_conv_id', wa_conv_id)
+  const data = await datastore.runQuery(query);
+  console.log('fetch data by wa wa_conv_id', wa_conv_id);
+  console.log(JSON.stringify(data))
+  if (data && data.length && data[0] && data[0][0]) {
+    return data[0][0];
   }
 };
 
-const get_message_by_wa_message_id = async ({wa_message_id}) => {
-  const data = await dt_get({ kind: 'MOENGAGE_MESSAGES', key: wa_message_id });
-  if (data && data.length && data[0]) {
-    return data[0];
+const get_message_by_wa_message_id = async ({ wa_message_id }) => {
+  const queryMOengageMessages = datastore.createQuery('MOENGAGE_MESSAGES');
+  const query = await queryMOengageMessages.filter('wa_message_id', wa_message_id);
+  const data = await datastore.runQuery(query);
+  console.log('fetch data by wa message id', wa_message_id);
+  console.log(JSON.stringify(data))
+  if (data && data.length && data[0] && data[0][0]) {
+    return data[0][0];
   }
 };
 

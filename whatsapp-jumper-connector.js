@@ -423,7 +423,8 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
       message: `s3ndt3mpl4te_${template_id}`,
       messagetype: 'template',
     // message_params:  JSON.stringify( {'HEADER':[],'BODY':[{'1':'text'}],'BUTTONS':[{'type':'button','sub_type':'url','index':0,'parameters':[{'type':'text','text':'/order/1234'}]}]}),
-      message_params: JSON.stringify(components)
+      message_params: JSON.stringify(components),
+      source: 'moengage'
     };
 
   try {

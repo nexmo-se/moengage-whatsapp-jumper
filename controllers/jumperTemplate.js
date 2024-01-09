@@ -1,4 +1,4 @@
-const api = require('../api');
+const api = require('../utils/api');
 const util = require('../utils/util');
 
 const controller = {

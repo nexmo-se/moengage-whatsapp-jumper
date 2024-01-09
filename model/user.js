@@ -1,6 +1,6 @@
 const {dt_store, dt_get, getUsersToUpdateToken, getUsersByToken} = require('../datastore/datastore.js');
 const util = require('../utils/util');
-const api = require('../api');
+const api = require('../utils/api');
 
 const model = {
   refreshAllToken: async (res, response) => {
@@ -35,6 +35,7 @@ const model = {
         console.log('refreshed token response: ', JSON.stringify(response));
         return response;
       } else {
+        const response = await model.updateUserInvalidTokenByKey({updated_token: data.access_token, updated_refresh_token: data.refresh_token, old_token: token, expires_in: data.expires_in});
         return {refreshTokenError: 'Token is not refreshed due to invalid refresh token', data};
       }
     }
@@ -45,13 +46,27 @@ const model = {
     const usersUpdatedTokens = [];
     for (let i=0; i < users.length; i++) {
       const user = users[i];
-      if (user.MID_SHOP_NAME) {
+      if (user.uid_shop_name) {
         user.refresh_token = updated_refresh_token;
         user.token = updated_token;
         user.token_expiry_time = util.getDateForExpirySeconds(expires_in);
-        await dt_store({kind: 'SFMC_CONF', key: user.MID_SHOP_NAME, data: user});
+        await dt_store({kind: 'MOENGAGE_CONF', key: user.uid_shop_name, data: user});
         console.log( user.client_key + ' updated conf for client key: ', user.client_key );
-        usersUpdatedTokens.push({client_key: user.client_key, MID_SHOP_NAME: user.MID_SHOP_NAME});
+        usersUpdatedTokens.push({client_key: user.client_key, uid_shop_name: user.uid_shop_name});
+      }
+    }
+    return usersUpdatedTokens;
+  },
+  updateUserInvalidTokenByKey: async ({updated_token, updated_refresh_token, old_token, expires_in}) => {
+    const [users] = await getUsersByToken(old_token);
+    const usersUpdatedTokens = [];
+    for (let i=0; i < users.length; i++) {
+      const user = users[i];
+      if (user.uid_shop_name) {
+        user.is_valid_token = false;
+        await dt_store({kind: 'MOENGAGE_CONF', key: user.uid_shop_name, data: user});
+        console.log( user.client_key + ' updated conf for client key: ', user.client_key );
+        usersUpdatedTokens.push({client_key: user.client_key, uid_shop_name: user.uid_shop_name});
       }
     }
     return usersUpdatedTokens;

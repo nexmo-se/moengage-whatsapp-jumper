@@ -1,12 +1,13 @@
-const api = require('../api.js');
-const {dt_store, getUserDetailsBy_MID} = require('../datastore/datastore.js');
+const api = require('../utils/api.js');
+const {dt_store, getUserDetailsBy_UID} = require('../datastore/datastore.js');
 const jumperUser = require('./user.js');
 const userModel = require('../model/user.js');
+const jwt = require('jsonwebtoken');
 
 const controller = {
   refreshToken: async (req, res) => {
     try {
-      const data = await userModel.refresh_token(req.body);
+      const data = await userModel.refreshToken(req.body);
       res.status(data.status || 500).json(data);
     } catch (error) {
       console.error('error at refreshToken controller', error);
@@ -22,9 +23,9 @@ const controller = {
     if (status) {
       try {
         const is_valid_token = verified == 1;
-        let data = await getUserDetailsBy_MID(MID);
+        let data = await getUserDetailsBy_UID(MID);
         data = {...data, ...{is_valid_token: is_valid_token}};
-        await dt_store({kind: 'SFMC_CONF', key: MID, data});
+        await dt_store({kind: 'MOENGAGE_CONF', key: MID, data});
         console.log(`verify jumper token succeed for MID: ${MID}`);
       } catch (error) {
         console.log(`verify jumper token failed for MID: ${MID}`);
@@ -45,7 +46,7 @@ const controller = {
   },
   generateToken: async (req, res) => {
     try {
-      const { userId, token } = req.body; 
+      const { userId, shopName: token } = req.body; 
       let data = {
           time: Date(),
           userId: userId,
@@ -53,6 +54,7 @@ const controller = {
       const generatedToken = jwt.sign(data, token);
       res.status(200).send({token: generatedToken});
     } catch (error) {
+      console.error(error);
       res.status(500).send({ error: JSON.stringify(error) });
     }
   }

@@ -1,5 +1,5 @@
 const {json} = require('express');
-const api = require('../api');
+const api = require('../utils/api');
 const {dt_store, dt_get, get_message_by_wa_message_id, store_message} = require('../datastore/datastore.js');
 
 const controller = {

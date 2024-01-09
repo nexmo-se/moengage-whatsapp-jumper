@@ -1,4 +1,5 @@
 const {CloudTasksClient} = require('@google-cloud/tasks');
+const util = require('../utils/util');
 
 const cloudTaskClientDetails = {
   projectId: process.env.DT_PROJECT_ID,
@@ -12,40 +13,43 @@ if (process.env.DT_JSON_PATH) {
 const cloudTaskClient = new CloudTasksClient(cloudTaskClientDetails);
 
 const controller = {
-  addTask: async (req, res) => {
+  moEngageTaskQueue: async (req, res) => {
     try {
-      // queyName is being used as QUEUE ID. QUEUE ID can contain letters ([A-Za-z]), numbers ([0-9]), or hyphens (-). The maximum length is 100 characters
-      const queyName = `MoEngage-${req.params.shopName}`.replace(/[^a-zA-Z0-9-]/g, "").substring(0, 99);
+      // queName is being used as QUEUE ID. QUEUE ID can contain letters ([A-Za-z]), numbers ([0-9]), or hyphens (-). The maximum length is 100 characters
+      const inArguments = req.body.inArguments[0];
+      const {userId, shopName} = req.query;
+      const queName = `MOENGAGE-${userId}-${shopName}`.replace(/[^a-zA-Z0-9-]/g, "").substring(0, 99);
 
       const project = process.env.DT_PROJECT_ID;
-      const queue = queyName;
       const location = process.env.QUEUE_LOCATION;
       const payload = JSON.stringify(req.body);
       const inSeconds = 0;
-      const url = `${process.env.ROOT_URL}/${req.params.shopName}/sfmcSendMessageForJourney`;
+      const url = `${process.env.ROOT_URL}/jumper_send_whatsapp?shopName=${shopName}&userId=${userId}`;
 
       try {
-        await controller.createQueue(queue);
+        await controller.createQueue(queName);
       } catch (error) {
         console.error('error', JSON.stringify(error));
       }
 
-      await controller.createHttpTask({project, location, queue, payload, inSeconds, url});
+      await controller.createHttpTask({project, location, queName, payload, inSeconds, url});
 
       return res.status(200).json({'success': 'true'});
     } catch (error) {
-      console.error('error at addTask controller', error);
+      console.error('error at sfmcExecuteTaskQueue controller', error);
       res.status(500).json({status: 'false', error: error});
     }
   },
   createHttpTask: async ({project, location, queue, payload, inSeconds, url}) => {
     // Construct the fully qualified queue name.
     const parent = cloudTaskClient.queuePath(project, location, queue);
+    const { token } = util.getReqToken();
 
     const task = {
       httpRequest: {
         headers: {
           'Content-Type': 'application/json', // Set content type to ensure compatibility your application's request parsing
+          'Authorization': token
         },
         httpMethod: process.env.QUEUE_SERVICE_METHOD, // 'POST',
         url: url, // '/log_payload',

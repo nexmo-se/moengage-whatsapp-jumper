@@ -65,15 +65,15 @@ const dt_get = async ({kind, key}) => {
   return tryRequest( {kind, key, currentAttempt: 1, delay: 3000});
 };
 
-const getUserDetailsBy_MID = async (MID) => {
-  const data = await dt_get({kind: 'SFMC_CONF', key: MID.toString()});
+const getUserDetailsBy_UID = async (MID) => {
+  const data = await dt_get({kind: 'MOENGAGE_CONF', key: MID.toString()});
   if (data && data.length && data[0]) {
     return data[0];
   }
 };
 
 // const getUserSDetails = async (MID) => {
-//   const data = await dt_get({kind: 'SFMC_CONF'});
+//   const data = await dt_get({kind: 'MOENGAGE_CONF'});
 //   return data;
 //   // if (data && data.length && data[0]) {
 //   //   return data[0];
@@ -81,7 +81,7 @@ const getUserDetailsBy_MID = async (MID) => {
 // };
 
 const getUsersToUpdateToken = async () => {
-  // const data = await dt_get({kind: 'SFMC_CONF'});
+  // const data = await dt_get({kind: 'MOENGAGE_CONF'});
   // console.log(data);
   let threeWeeks = new Date();
   threeWeeks.setDate(threeWeeks.getDate() + 21);
@@ -89,7 +89,7 @@ const getUsersToUpdateToken = async () => {
   // 2023-11-28T18:29:34.141Z
 
   console.log(threeWeeks);
-  const users = datastore.createQuery('SFMC_CONF');
+  const users = datastore.createQuery('MOENGAGE_CONF');
   const query = users.filter('token_expiry_time', '<', threeWeeks);
   const data = await datastore.runQuery(query);
   // console.log(data);
@@ -97,21 +97,10 @@ const getUsersToUpdateToken = async () => {
 };
 
 const getUsersByToken = async (token) => {
-  const queryMessages = datastore.createQuery('SFMC_CONF');
+  const queryMessages = datastore.createQuery('MOENGAGE_CONF');
   const query = await queryMessages.filter('token', token);
   const data = await datastore.runQuery(query);
   return data;
-};
-
-const get_message_by_wa_message_id = async ({wa_message_id}) => {
-  const queryMessages = datastore.createQuery('SFMC_MESSAGES');
-  const query = await queryMessages.filter('wa_message_id', wa_message_id);
-  const data = await datastore.runQuery(query);
-  console.log('fetch data by wa message id', wa_message_id);
-  console.log(JSON.stringify(data));
-  if (data && data.length && data[0] && data[0][0]) {
-    return data[0][0];
-  }
 };
 
 const currentDateTimeIso = function() {
@@ -119,27 +108,111 @@ const currentDateTimeIso = function() {
   return date.toISOString();
 };
 
-const store_message = async ({MID, shopName, wa_message_id, wa_conv_id, wa_template_id, sent_to, definitionInstanceId, journeyId, activityId, activityInstanceId, activityObjectID, status, errorMessage, finalStatus}) => {
-  const data = {
-    MID,
-    shopName,
-    wa_message_id,
-    wa_conv_id,
-    wa_template_id,
-    sent_to,
-    definitionInstanceId,
-    journeyId,
-    activityId,
-    activityInstanceId,
-    activityObjectID,
-    created_date: currentDateTimeIso(),
-    status: status,
-    errorMessage: errorMessage,
-    finalStatus,
-  };
-  console.log('store message', JSON.stringify(data));
-  return await dt_store({kind: 'SFMC_MESSAGES', key: wa_message_id, data});
+const getAuthToken = async () => {
+  const data = await dt_get({kind:'MOENGAGE_CONF', key: 'auth_token'});
+  if (data && data.length && data[0]) {
+    return data[0].value;
+  }
 };
 
-module.exports = {dt_store, dt_get, getUserDetailsBy_MID, getUsersToUpdateToken, get_message_by_wa_message_id, store_message, getUsersByToken};
+const getRefreshToken = async () => {
+  const data = await dt_get({kind:'MOENGAGE_CONF', key: 'refresh_token'});
+  if (data && data.length && data[0]) {
+    return data[0].value;
+  }
+};
+
+const get_templates = async () => {
+  const data = await dt_get({kind:'MOENGAGE_CONF', key: 'templates'});
+  if (data && data.length && data[0]) {
+    return data[0].value;
+  }
+};
+
+const get_wa_id = async () => {
+  const data = await dt_get({ kind: 'MOENGAGE_CONF', key: 'whatsapp_id' });
+  if (data && data.length && data[0]) {
+    return data[0].value;
+  }
+};
+
+const get_message_by_conv_id = async ({ wa_conv_id }) => {
+  const queryMOengageMessages = datastore.createQuery('MOENGAGE_MESSAGES');
+  const query = await queryMOengageMessages.filter('wa_conv_id', wa_conv_id)
+  const data = await datastore.runQuery(query);
+  console.log('fetch data by wa wa_conv_id', wa_conv_id);
+  console.log(JSON.stringify(data))
+  if (data && data.length && data[0] && data[0][0]) {
+    return data[0][0];
+  }
+};
+
+const get_message_by_wa_message_id = async ({ wa_message_id }) => {
+  const queryMOengageMessages = datastore.createQuery('MOENGAGE_MESSAGES');
+  const query = await queryMOengageMessages.filter('wa_message_id', wa_message_id);
+  const data = await datastore.runQuery(query);
+  console.log('fetch data by wa message id', wa_message_id);
+  console.log(JSON.stringify(data))
+  if (data && data.length && data[0] && data[0][0]) {
+    return data[0][0];
+  }
+};
+
+const get_whitelist = async () => {
+  const data = await dt_get({kind:'MOENGAGE_CONF', key: 'whitelist'});
+  if (data && data.length && data[0]) {
+    return data[0];
+  }
+};
+
+const store_auth_token = async ({auth_token}) => {
+  const data = {
+    value: auth_token,
+    last_updated: currentDateTimeIso()
+  }
+  return await dt_store({kind: 'MOENGAGE_CONF', key:'auth_token', data});
+};
+
+const store_refresh_token = async ({refresh_token}) => {
+  const data = {
+    value: refresh_token,
+    last_updated: currentDateTimeIso()
+  }
+  return await dt_store({kind: 'MOENGAGE_CONF', key:'refresh_token', data});
+};
+
+const store_templates = async ({ templates }) => {
+  const data = {
+    value: templates,
+    last_updated: currentDateTimeIso(),
+  }
+  return await dt_store({kind: 'MOENGAGE_CONF', key:'templates', data});
+};
+
+const store_wa_id = async ({whatsapp_id}) => {
+  const data = {
+    value: whatsapp_id,
+    last_updated: currentDateTimeIso(),
+  }
+  return await dt_store({kind: 'MOENGAGE_CONF', key:'whatsapp_id', data});
+};
+
+const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_message_id, wa_conv_id, campaign_id }) => {
+  const data = {
+    mo_msg_id,
+    mo_waba_number,
+    mo_template_id,
+    wa_message_id,
+    wa_conv_id,
+    created_date: currentDateTimeIso(),
+    campaign_id,
+  }
+  console.log(JSON.stringify(data));
+  return await dt_store({kind: 'MOENGAGE_MESSAGES', key:wa_message_id, data});
+};
+
+
+// module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUsersToUpdateToken, get_message_by_wa_message_id, store_message, getUsersByToken};
+module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};
+
 

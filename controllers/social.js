@@ -1,4 +1,4 @@
-const {fetchChannels} = require('../api');
+const {fetchChannels} = require('../utils/api');
 
 const controller = {
   getSocialChannels: async (req, res) => {

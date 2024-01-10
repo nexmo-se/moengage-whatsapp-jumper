@@ -1,5 +1,5 @@
 const api = require('../utils/api.js');
-const {dt_store, getUserDetailsBy_UID} = require('../datastore/datastore.js');
+const {dt_store, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name} = require('../datastore/datastore.js');
 const jumperUser = require('./user.js');
 const userModel = require('../model/user.js');
 const jwt = require('jsonwebtoken');
@@ -15,20 +15,21 @@ const controller = {
     }
   },
   verifyJumperSavedToken: async (req, res) => {
-    const MID = `${req.body.MID}_${req.params.shopName}`;
-    const {status, verified} = await api.verifyJumperSavedToken({MID});
-    console.log(`verify jumper token init for MID: ${MID}`);
+    const { userId, shopName } = req.body;
+    const uid_shop_name = `${userId}_${shopName}`;
+    const {status, verified} = await api.verifyJumperSavedToken({uid_shop_name});
+    console.log(`verify jumper token init for uid_shop_name: ${uid_shop_name}`);
 
 
     if (status) {
       try {
         const is_valid_token = verified == 1;
-        let data = await getUserDetailsBy_UID(MID);
+        let data = await getUserDetailsBy_uid_shop_name(uid_shop_name);
         data = {...data, ...{is_valid_token: is_valid_token}};
-        await dt_store({kind: 'MOENGAGE_CONF', key: MID, data});
-        console.log(`verify jumper token succeed for MID: ${MID}`);
+        await dt_store({kind: 'MOENGAGE_CONF', key: uid_shop_name, data});
+        console.log(`verify jumper token succeed for uid_shop_name: ${uid_shop_name}`);
       } catch (error) {
-        console.log(`verify jumper token failed for MID: ${MID}`);
+        console.log(`verify jumper token failed for uid_shop_name: ${uid_shop_name}`);
         return res.status(500).json(error);
       }
     }

@@ -40,9 +40,9 @@ const getJumperToken = async function(params) {
   }
 };
 
-const postFormData = async function (url, body) {
+const postFormData = async function (url, body, uid_shop_name) {
   try {
-    const token = await getAuthToken();
+    const token = await getJumperToken({uid_shop_name});
     const apiToCall = url;
     const formData = new FormData();
     Object.keys(body).forEach((key) => {
@@ -175,4 +175,4 @@ const fetchWaTemplate = async function(id, auth) {
   return data;
 };
 
-module.exports = { postFormData, refreshToken, verifyJumperSavedToken, fetchSocialChannels, axios_error_logger, axiosApiCall, axiosInstance, updateStatusToMoEngage };
+module.exports = { postFormData, refreshToken, verifyJumperSavedToken, fetchSocialChannels, fetchWaTemplates, axios_error_logger, axiosApiCall, axiosInstance, updateStatusToMoEngage, getJumperToken };

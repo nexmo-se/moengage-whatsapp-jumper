@@ -81,293 +81,293 @@ app.get('/', (req, res) => {
 //   }
 // });
 
-app.get('/refresh_token', async (req, res) => {
-  // code to white list url
-  // if url is not white listed then return
+// app.get('/refresh_token', async (req, res) => {
+//   // code to white list url
+//   // if url is not white listed then return
 
 
-  let isSuccess = true;
-  try {
-    const response = await  refresh_jumper_tokens();
-    if(!response) {
-     isSuccess = false
-     console.error('failed refresh token:', response);
-    }else{}
-  } catch (e) {
-    console.error(e);
-    isSuccess = false
-  }
-  res.json(req.query,  isSuccess ? 200 : 500);
-});
+//   let isSuccess = true;
+//   try {
+//     const response = await  refresh_jumper_tokens();
+//     if(!response) {
+//      isSuccess = false
+//      console.error('failed refresh token:', response);
+//     }else{}
+//   } catch (e) {
+//     console.error(e);
+//     isSuccess = false
+//   }
+//   res.json(req.query,  isSuccess ? 200 : 500);
+// });
 
-app.post('/moengage_callback', async (req, res) => {
-  console.log("moengage post",req.body)
-  res.send(200)
-})
+// app.post('/moengage_callback', async (req, res) => {
+//   console.log("moengage post",req.body)
+//   res.send(200)
+// })
 
-app.get('/list_jumper_templates', async (req, res) => {
-  console.log("moengage post",req.body)
-  var _templates = await jumper_fetch_templates()
-  res.json(_templates)
-})
+// app.get('/list_jumper_templates', async (req, res) => {
+//   console.log("moengage post",req.body)
+//   var _templates = await jumper_fetch_templates()
+//   res.json(_templates)
+// })
 
-function getStatus(req) {
-  try {
-    const { data, subscription_type, type } = req.body.event;
-    console.log('data', JSON.stringify(data))
-    let status = '', wa_message_id = '';
-    if (type == 'UPDATE' && subscription_type == 'livechat') {
+// function getStatus(req) {
+//   try {
+//     const { data, subscription_type, type } = req.body.event;
+//     console.log('data', JSON.stringify(data))
+//     let status = '', wa_message_id = '';
+//     if (type == 'UPDATE' && subscription_type == 'livechat') {
 
-      // code to extract rejected status
-      status = data?.status;
-      if (status) {
-        wa_message_id = data?.message_uuid;
-        if (status == 'rejected' || status == 'reject') {
-          status = "failed"
-        }
-        return {status, wa_message_id};
-      }
+//       // code to extract rejected status
+//       status = data?.status;
+//       if (status) {
+//         wa_message_id = data?.message_uuid;
+//         if (status == 'rejected' || status == 'reject') {
+//           status = "failed"
+//         }
+//         return {status, wa_message_id};
+//       }
 
-      // code to extract sent and delivered status
-      status = data?.entry[0]?.changes[0]?.value?.statuses[0]?.status;
-      if (status) {
-        wa_message_id = data?.entry[0]?.changes[0]?.value?.statuses[0]?.id;
-        return {status, wa_message_id};
-      }
+//       // code to extract sent and delivered status
+//       status = data?.entry[0]?.changes[0]?.value?.statuses[0]?.status;
+//       if (status) {
+//         wa_message_id = data?.entry[0]?.changes[0]?.value?.statuses[0]?.id;
+//         return {status, wa_message_id};
+//       }
       
-    } else {
-      return {}
-    }
+//     } else {
+//       return {}
+//     }
 
-  } catch (error) {
-    console.error('error:', JSON.stringify(error));
-    return {}
-  }
-}
+//   } catch (error) {
+//     console.error('error:', JSON.stringify(error));
+//     return {}
+//   }
+// }
 
-app.post('/jumper_callback', async (req, res) => {
-  console.log('callback init', JSON.stringify(req.body))
-  const {status, wa_message_id} = getStatus(req);
-  console.log('status:', JSON.stringify({ status, wa_message_id }));
+// app.post('/jumper_callback', async (req, res) => {
+//   console.log('callback init', JSON.stringify(req.body))
+//   const {status, wa_message_id} = getStatus(req);
+//   console.log('status:', JSON.stringify({ status, wa_message_id }));
 
-  if(status && wa_message_id) {
-    const response = await updateStatusToMoEngage(status, wa_message_id)
-    const responseData = response?.data;
-    console.log('updateStatusToMoEngage response ', JSON.stringify(responseData));
-    if (responseData.status == "success") {
-      console.log(`${wa_message_id} successfully status updated as ${status}`)
-      return res.json({"status":"success","message":`MoEngage status updated as "${status}" for message id: ${wa_message_id}`})
-    }
-  }
-  console.error(`${wa_message_id} error in status update, status: ${status}, wa_message_id: ${wa_message_id}`);
-  return res.json({ "status": "error", "message": "failed sending  callback to moengage" })
-});
+//   if(status && wa_message_id) {
+//     const response = await updateStatusToMoEngage(status, wa_message_id)
+//     const responseData = response?.data;
+//     console.log('updateStatusToMoEngage response ', JSON.stringify(responseData));
+//     if (responseData.status == "success") {
+//       console.log(`${wa_message_id} successfully status updated as ${status}`)
+//       return res.json({"status":"success","message":`MoEngage status updated as "${status}" for message id: ${wa_message_id}`})
+//     }
+//   }
+//   console.error(`${wa_message_id} error in status update, status: ${status}, wa_message_id: ${wa_message_id}`);
+//   return res.json({ "status": "error", "message": "failed sending  callback to moengage" })
+// });
 
-app.post('/jumper_callback_2', async (req, res) => {
-  // sent
-  // submitted
-  // delivered
-  // replied*
-  // rejected
-  // failed
-  // read
-  // reply from agent*
+// app.post('/jumper_callback_2', async (req, res) => {
+//   // sent
+//   // submitted
+//   // delivered
+//   // replied*
+//   // rejected
+//   // failed
+//   // read
+//   // reply from agent*
   
-  console.log("post Callback: ")
-  // console.log(JSON.stringify(req.body))
-  let payload = req.body.event
-  console.log( JSON.stringify(payload) )
-  if(payload.subscription_type=="livechat"){
-    if(!payload.data.agent){ //means it's from the user
-      reply_message = await create_moengage_reply(payload.data.messageid, payload.data.conversationid,payload.data.message,payload.data.mobilecountrycode+payload.data.mobile, payload.data.replytomessage)
-      let data = JSON.stringify(reply_message);
-      console.log("Data to be sent:", data)
-      let config = {
-        method: 'post',
-        maxBodyLength: Infinity,
-        url: moengage_callback,
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        data : data
-      };
-      try {
-        console.log('call back to moengage livechat', JSON.stringify(config))
-        const response = await axiosInstance.request(config);
-        console.log(response.data)
-        if (response.data.success == true){
-          return res.json({"status":"success","message":response.data})
-        }
-        else return res.json({"status":"error","message":"failed sending  callback to moengage"})
-      } catch (error) {
-        axios_error_logger(moengage_callback, error)
-        return res.json({"status":"error","message":"failed sending callback to moengage"})
-      }
-    }else if(payload.data.delivered == true){
-      reply_message = await create_moengage_dlr(payload.data.messageid, "delivered")
-      let data = JSON.stringify(reply_message);
-      console.log("Data to be sent:", data)
-      let config = {
-        method: 'post',
-        maxBodyLength: Infinity,
-        url: moengage_callback,
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        data : data
-      };
-      try {
-        console.log('call back to moengage delivered', JSON.stringify(config))
-        const response = await axiosInstance.request(config);
-        console.log(response.data)
-        if (response.data.success == true){
-          return res.json({"status":"success","message":response.data})
-        }
-        else return res.json({"status":"error","message":"failed sending  callback to moengage"})
-      } catch (error) {
-        axios_error_logger(moengage_callback, error)
-        return res.json({"status":"error","message":"failed sending callback to moengage"})
-      }
-    }
-  }
+//   console.log("post Callback: ")
+//   // console.log(JSON.stringify(req.body))
+//   let payload = req.body.event
+//   console.log( JSON.stringify(payload) )
+//   if(payload.subscription_type=="livechat"){
+//     if(!payload.data.agent){ //means it's from the user
+//       reply_message = await create_moengage_reply(payload.data.messageid, payload.data.conversationid,payload.data.message,payload.data.mobilecountrycode+payload.data.mobile, payload.data.replytomessage)
+//       let data = JSON.stringify(reply_message);
+//       console.log("Data to be sent:", data)
+//       let config = {
+//         method: 'post',
+//         maxBodyLength: Infinity,
+//         url: moengage_callback,
+//         headers: { 
+//           'Content-Type': 'application/json'
+//         },
+//         data : data
+//       };
+//       try {
+//         console.log('call back to moengage livechat', JSON.stringify(config))
+//         const response = await axiosInstance.request(config);
+//         console.log(response.data)
+//         if (response.data.success == true){
+//           return res.json({"status":"success","message":response.data})
+//         }
+//         else return res.json({"status":"error","message":"failed sending  callback to moengage"})
+//       } catch (error) {
+//         axios_error_logger(moengage_callback, error)
+//         return res.json({"status":"error","message":"failed sending callback to moengage"})
+//       }
+//     }else if(payload.data.delivered == true){
+//       reply_message = await create_moengage_dlr(payload.data.messageid, "delivered")
+//       let data = JSON.stringify(reply_message);
+//       console.log("Data to be sent:", data)
+//       let config = {
+//         method: 'post',
+//         maxBodyLength: Infinity,
+//         url: moengage_callback,
+//         headers: { 
+//           'Content-Type': 'application/json'
+//         },
+//         data : data
+//       };
+//       try {
+//         console.log('call back to moengage delivered', JSON.stringify(config))
+//         const response = await axiosInstance.request(config);
+//         console.log(response.data)
+//         if (response.data.success == true){
+//           return res.json({"status":"success","message":response.data})
+//         }
+//         else return res.json({"status":"error","message":"failed sending  callback to moengage"})
+//       } catch (error) {
+//         axios_error_logger(moengage_callback, error)
+//         return res.json({"status":"error","message":"failed sending callback to moengage"})
+//       }
+//     }
+//   }
   
-  return res.json(200);
-});
+//   return res.json(200);
+// });
 
 
-async function create_moengage_reply(message_id, conv_id, message, to, replytomessage = null){
-  var waba_number
-  var moengage_msg_id
-  var template_id
-  var tid = null
-  if (replytomessage){
-    tid = replytomessage.message.split("_")[1]
-    const messageDetails = await get_message_by_conv_id(replytomessage.conversationid);
-    console.log('conversationid:' + replytomessage.conversationid);
-    console.log(JSON.stringify(messageDetails));
-    waba_number = messageDetails.mo_waba_number;
-    moengage_msg_id = messageDetails.mo_msg_id;
-    template_id = messageDetails.mo_template_id;
-    // waba_number = await dt_get("conv_id_waba_"+replytomessage.conversationid)
-    // moengage_msg_id = await dt_get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
-    // template_id = await dt_get("conv_id_moengage_template_id_"+replytomessage.conversationid)
-  }
+// async function create_moengage_reply(message_id, conv_id, message, to, replytomessage = null){
+//   var waba_number
+//   var moengage_msg_id
+//   var template_id
+//   var tid = null
+//   if (replytomessage){
+//     tid = replytomessage.message.split("_")[1]
+//     const messageDetails = await get_message_by_conv_id(replytomessage.conversationid);
+//     console.log('conversationid:' + replytomessage.conversationid);
+//     console.log(JSON.stringify(messageDetails));
+//     waba_number = messageDetails.mo_waba_number;
+//     moengage_msg_id = messageDetails.mo_msg_id;
+//     template_id = messageDetails.mo_template_id;
+//     // waba_number = await dt_get("conv_id_waba_"+replytomessage.conversationid)
+//     // moengage_msg_id = await dt_get("conv_id_moengage_msg_id_"+replytomessage.conversationid)
+//     // template_id = await dt_get("conv_id_moengage_template_id_"+replytomessage.conversationid)
+//   }
   
-  console.log("Template ID:",template_id)
-  console.log("TID:",tid)
+//   console.log("Template ID:",template_id)
+//   console.log("TID:",tid)
   
 
 
-  payload = {
-    "from": to,
-    "waba_number": waba_number,
-    "timestamp": Date.now(),
-    "type": "text",
-    "context": {
-      "msg_id": moengage_msg_id
-    }
-  }
+//   payload = {
+//     "from": to,
+//     "waba_number": waba_number,
+//     "timestamp": Date.now(),
+//     "type": "text",
+//     "context": {
+//       "msg_id": moengage_msg_id
+//     }
+//   }
 
-  if(template_id == tid){
-    console.log("Reply to message detected: Treating as button with text")
-    payload["button"] = {"payload":{"nothing":0},"text":message}
-    payload["type"] = "button"
-  }
-  return payload
-}
+//   if(template_id == tid){
+//     console.log("Reply to message detected: Treating as button with text")
+//     payload["button"] = {"payload":{"nothing":0},"text":message}
+//     payload["type"] = "button"
+//   }
+//   return payload
+// }
 
-async function create_moengage_dlr(message_id, status){
-  // var moengage_msg_id = await dt_get("message_id_" + message_id);
-  console.log('message id', message_id);
-  const message = await get_message_by_wa_message_id({ wa_message_id: message_id })
-  console.log( "delivered message", JSON.stringify(message));
-  const moengage_msg_id = message.mo_msg_id
-  return {
-    "statuses": [
-        {
-        "msg_id": moengage_msg_id,
-        "status": status,
-        "timestamp": Date.now()
-        }
-      ]
-    }
-}
+// async function create_moengage_dlr(message_id, status){
+//   // var moengage_msg_id = await dt_get("message_id_" + message_id);
+//   console.log('message id', message_id);
+//   const message = await get_message_by_wa_message_id({ wa_message_id: message_id })
+//   console.log( "delivered message", JSON.stringify(message));
+//   const moengage_msg_id = message.mo_msg_id
+//   return {
+//     "statuses": [
+//         {
+//         "msg_id": moengage_msg_id,
+//         "status": status,
+//         "timestamp": Date.now()
+//         }
+//       ]
+//     }
+// }
 
-app.post('/send_whatsapp', moengage_auth, async (req, res) => {
-  const project = process.env.DT_PROJECT_ID;
-  const queue = process.env.QUEUE_NAME;
-  const location = process.env.QUEUE_LOCATION;
-  const payload = JSON.stringify(req.body);
+// app.post('/send_whatsapp', moengage_auth, async (req, res) => {
+//   const project = process.env.DT_PROJECT_ID;
+//   const queue = process.env.QUEUE_NAME;
+//   const location = process.env.QUEUE_LOCATION;
+//   const payload = JSON.stringify(req.body);
 
-  try {
-    await addTask(project, queue, location, payload);
-    res.status(200).send({status: "success"});
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({message: error});
-  }
-})
+//   try {
+//     await addTask(project, queue, location, payload);
+//     res.status(200).send({status: "success"});
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send({message: error});
+//   }
+// })
 
-app.post('/chat/send-message', moengage_auth, async (req, res) => {
+// app.post('/chat/send-message', moengage_auth, async (req, res) => {
 
-  try {
-    console.log("post Whatsapp: ", JSON.stringify(req.body));
-    let campaign_id = req.query.campaign_id, data = req.body, found = false;
+//   try {
+//     console.log("post Whatsapp: ", JSON.stringify(req.body));
+//     let campaign_id = req.query.campaign_id, data = req.body, found = false;
 
-    let templates = await get_templates(); // get templates cached in store
-    let foundTemplate = templates?.find(t => t.template_name == data.template.name)
-    // let foundTemplate = templates[0];
-    console.log('found template', JSON.stringify(foundTemplate));
+//     let templates = await get_templates(); // get templates cached in store
+//     let foundTemplate = templates?.find(t => t.template_name == data.template.name)
+//     // let foundTemplate = templates[0];
+//     console.log('found template', JSON.stringify(foundTemplate));
 
-    if (!templates?.length || !foundTemplate) {
-      console.log('fetch templates');
-      templates = await jumper_fetch_templates();
-      await store_templates({ templates })
-      foundTemplate = templates.find(t => t.template_name == data.template.name)
-    }
+//     if (!templates?.length || !foundTemplate) {
+//       console.log('fetch templates');
+//       templates = await jumper_fetch_templates();
+//       await store_templates({ templates })
+//       foundTemplate = templates.find(t => t.template_name == data.template.name)
+//     }
 
 
-    //if we find it, let's look if the language is supported by the template
-    if(foundTemplate){
-      await foundTemplate.templates.forEach(async (template_language) => {
-        const foundLanguage = findKeyValue(template_language, "language", data.template?.language?.code)
+//     //if we find it, let's look if the language is supported by the template
+//     if(foundTemplate){
+//       await foundTemplate.templates.forEach(async (template_language) => {
+//         const foundLanguage = findKeyValue(template_language, "language", data.template?.language?.code)
 
-        //if we find the language, let's send the message
-        if(foundLanguage.length>0){
-          found = true;
-          let components = null;
-          if(data.template.components) components = data.template.components
+//         //if we find the language, let's send the message
+//         if(foundLanguage.length>0){
+//           found = true;
+//           let components = null;
+//           if(data.template.components) components = data.template.components
 
-          const dat = await sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id);
-          return res.json(dat).end
-        }
-      })
-    }
+//           const dat = await sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id);
+//           return res.json(dat).end
+//         }
+//       })
+//     }
 
-    if(!found){
-      mes = {
-        "status": "failure",
-        "error" : {
-        "code" : "01",
-        "message" : "TEMPLATE NOT FOUND"
-        }
-      }
-      console.log("error:", JSON.stringify(mes));
-      return res.status(500).send(mes);
-    }
-  } catch (error) {
-    console.log("error:", JSON.stringify(error));
-    mes = {
-      "status": "failure",
-      "error" : {
-        "code" : "01",
-        "message" : error
-      }
-    }
-    return res.status(500).send(mes);
-  }
+//     if(!found){
+//       mes = {
+//         "status": "failure",
+//         "error" : {
+//         "code" : "01",
+//         "message" : "TEMPLATE NOT FOUND"
+//         }
+//       }
+//       console.log("error:", JSON.stringify(mes));
+//       return res.status(500).send(mes);
+//     }
+//   } catch (error) {
+//     console.log("error:", JSON.stringify(error));
+//     mes = {
+//       "status": "failure",
+//       "error" : {
+//         "code" : "01",
+//         "message" : error
+//       }
+//     }
+//     return res.status(500).send(mes);
+//   }
   
-});
+// });
 
 
 //send whatsapp message with template

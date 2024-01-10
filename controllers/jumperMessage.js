@@ -1,81 +1,73 @@
 const {json} = require('express');
 const api = require('../utils/api');
-const {dt_store, dt_get, get_message_by_wa_message_id, store_message} = require('../datastore/datastore.js');
+const { fetchWaTemplates } = require('../utils/api');
+const util = require('../utils/util');
+const {dt_store, dt_get, get_message_by_wa_message_id, store_message, get_templates, get_templates_by_uid_shop_name, store_templates_by_uid_shop_name} = require('../datastore/datastore.js');
+const messageModel = require('../model/message.js');
 
 const controller = {
-  sendWhatsAppMessage: async (req, res, requestParams) => {
-    // sfmc.getPhoneNumber();
-    const inArguments = requestParams.inArguments[0];
+  sendWhatsAppMessage: async (req, res) => {
     try {
-      console.log('debug-sendWhatsAppMessage init');
-      // req.body.jsonPayload.inArguments[0];
-      let message = inArguments.message;
-      const MID = `${inArguments.MID}_${req.params.shopName}`;
-      const mobileNumber = inArguments.sendTo;
-      const templateId = 's3ndt3mpl4te_' + inArguments.templateId;
-      console.log('debug templateId:' + templateId, 'MID:' + MID);
-      Object.keys(inArguments).forEach((key) => {
-        if (key !== 'message') {
-          if (message.includes(key)) {
-            const value = inArguments[key];
-            message = message.replaceAll(key, value);
+      console.log("post Whatsapp: ", JSON.stringify(req.body));
+      let campaign_id = req.query.campaign_id, data = req.body, found = false;
+      const { userId, shopName } = req.query;
+      const uid_shop_name = `${userId}_${shopName}`;
+  
+      const response = await get_templates_by_uid_shop_name({uid_shop_name}); // get templates cached in store
+      let templates = response?.data?.data;
+      let foundTemplate = templates?.find(t => t.template_name == data.template.name)
+      // let foundTemplate = templates[0];
+      console.log('found template', JSON.stringify(foundTemplate));
+  
+      if (!templates?.length || !foundTemplate) {
+        console.log('fetch templates');
+        const responseWaTemplates = await fetchWaTemplates(1000, {uid_shop_name});
+        templates = responseWaTemplates?.data?.data;
+        console.log(templates);
+        await store_templates_by_uid_shop_name({ templates, uid_shop_name });
+        foundTemplate = templates?.find(t => t.template_name == data.template.name)
+      }
+  
+  
+      //if we find it, let's look if the language is supported by the template
+      if(foundTemplate){
+        await foundTemplate.templates.forEach(async (template_language) => {
+          const foundLanguage = util.findKeyValue(template_language, "language", data.template?.language?.code)
+  
+          //if we find the language, let's send the message
+          if(foundLanguage.length>0){
+            found = true;
+            let components = null;
+            if(data.template.components) components = data.template.components
+  
+            const dat = await messageModel.sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id, uid_shop_name);
+            return res.json(dat).end
+          }
+        })
+      }
+  
+      if(!found){
+        mes = {
+          "status": "failure",
+          "error" : {
+          "code" : "01",
+          "message" : "TEMPLATE NOT FOUND"
           }
         }
-      });
-
-      const body = {
-        // pageid: 4885823201869824,
-        // conversationid: mobileNumber,
-        to: mobileNumber,
-        channel: 'whatsapp',
-        message: templateId,
-        messagetype: 'template',
-        message_params: message,
-        MID,
-      };
-
-      console.log('debug-execute body' + MID, JSON.stringify(body));
-
-      // ------- sending message with rate limit start ------
-      // empty promise to ignite rate limit queue
-      // await limiter(() => new Promise((resolve) => {
-      //   resolve();
-      // }));
-
-      const data = await api.sendMessage(body);
-      // ******** sending message with rate limit end ********
-
-      const {conversationid, message_id, success, errorMessage} = data?.data || {};
-      const {definitionInstanceId, journeyId, activityId, activityInstanceId, activityObjectID} = requestParams || {};
-      const msgStatus = {
-        MID: inArguments.MID,
-        shopName: req.params.shopName,
-        wa_message_id: message_id,
-        wa_conv_id: conversationid,
-        wa_template_id: templateId,
-        sent_to: mobileNumber,
-        definitionInstanceId,
-        journeyId,
-        activityId,
-        activityInstanceId,
-        activityObjectID,
-        status: success ? {'SENT': true} : {'FAILED': true},
-        errorMessage: success ? "" : errorMessage,
-      };
-      await store_message(msgStatus);
-
-      console.log('debug-send_message response ' + MID, JSON.stringify(data));
-
-      // return res.status(200).json({"foundSignupDate": "2023-10-23"});
-      const status = success == true ? 200 : 500;
-      const responseBack = {'success': status == 200 ? 'true' : 'false'};
-      console.log('debug-send_message response back ' + MID);
-      console.log(JSON.stringify(responseBack));
-      return res.status(status).json(responseBack);
-    } catch (err) {
-      console.log(err);
-      console.error('WA_MSG_ERROR', JSON.stringify(err));
-      return res.status(500).json({'success': 'false'});
+        console.log("error:", JSON.stringify(mes));
+        return res.status(500).send(mes);
+      }
+    } catch (error) {
+      console.error(error);
+      console.log("error:", JSON.stringify(error));
+      mes = {
+        "status": "failure",
+        "error" : {
+          "code" : "01",
+          "message" : error
+        }
+      }
+      return res.status(500).send(mes);
     }
   },
   sendTextMessage: async (req, res, inArguments) => {

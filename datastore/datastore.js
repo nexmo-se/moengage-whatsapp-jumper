@@ -136,6 +136,13 @@ const get_templates = async () => {
   }
 };
 
+const get_templates_by_uid_shop_name = async ({ uid_shop_name }) => {
+  const data = await dt_get({kind:'MOENGAGE_CONF', key: `${uid_shop_name}_templates`});
+  if (data && data.length && data[0]) {
+    return data[0].value;
+  }
+};
+
 const get_wa_id = async () => {
   const data = await dt_get({ kind: 'MOENGAGE_CONF', key: 'whatsapp_id' });
   if (data && data.length && data[0]) {
@@ -196,6 +203,14 @@ const store_templates = async ({ templates }) => {
   return await dt_store({kind: 'MOENGAGE_CONF', key:'templates', data});
 };
 
+const store_templates_by_uid_shop_name = async ({ templates, uid_shop_name }) => {
+  const data = {
+    value: templates,
+    last_updated: currentDateTimeIso(),
+  }
+  return await dt_store({kind: 'MOENGAGE_CONF', key:`${uid_shop_name}_templates`, data});
+};
+
 const store_wa_id = async ({whatsapp_id}) => {
   const data = {
     value: whatsapp_id,
@@ -204,7 +219,7 @@ const store_wa_id = async ({whatsapp_id}) => {
   return await dt_store({kind: 'MOENGAGE_CONF', key:'whatsapp_id', data});
 };
 
-const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_message_id, wa_conv_id, campaign_id }) => {
+const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_message_id, wa_conv_id, campaign_id, uid_shop_name }) => {
   const data = {
     mo_msg_id,
     mo_waba_number,
@@ -213,6 +228,7 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
     wa_conv_id,
     created_date: currentDateTimeIso(),
     campaign_id,
+    uid_shop_name
   }
   console.log(JSON.stringify(data));
   return await dt_store({kind: 'MOENGAGE_MESSAGES', key:wa_message_id, data});
@@ -220,6 +236,6 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
 
 
 // module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUsersToUpdateToken, get_message_by_wa_message_id, store_message, getUsersByToken};
-module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};
+module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_templates_by_uid_shop_name, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_templates_by_uid_shop_name, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};
 
 

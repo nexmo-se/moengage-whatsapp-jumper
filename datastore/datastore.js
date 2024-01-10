@@ -65,8 +65,15 @@ const dt_get = async ({kind, key}) => {
   return tryRequest( {kind, key, currentAttempt: 1, delay: 3000});
 };
 
-const getUserDetailsBy_UID = async (MID) => {
-  const data = await dt_get({kind: 'MOENGAGE_CONF', key: MID.toString()});
+const getUserDetailsBy_UID = async (uid) => {
+  const data = await dt_get({kind: 'MOENGAGE_CONF', key: user_uid});
+  if (data && data.length && data[0]) {
+    return data[0];
+  }
+};
+
+const getUserDetailsBy_uid_shop_name = async (uid_shop_name) => {
+  const data = await dt_get({kind: 'MOENGAGE_CONF', key: uid_shop_name});
   if (data && data.length && data[0]) {
     return data[0];
   }
@@ -213,6 +220,6 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
 
 
 // module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUsersToUpdateToken, get_message_by_wa_message_id, store_message, getUsersByToken};
-module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};
+module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};
 
 

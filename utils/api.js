@@ -3,7 +3,7 @@ const FormData = require("form-data");
 const axios = require('axios');
 const { getAuthToken, get_message_by_wa_message_id } = require('../datastore');
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL;
-const {getUserDetailsBy_UID} = require('../datastore/datastore.js');
+const {getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name} = require('../datastore/datastore.js');
 const apiRoot = 'https://api.jumper.ai/';
 
 const Agent = require('agentkeepalive');
@@ -27,6 +27,11 @@ const axiosInstance = axios.create({httpAgent: keepAliveAgent, httpsAgent: https
 const getJumperToken = async function(params) {
   if (params && params.token) {
     return params.token;
+  } else if (params.uid_shop_name) {
+    const userDetails = await getUserDetailsBy_uid_shop_name(params.uid_shop_name);
+    if (userDetails) {
+      return userDetails.token;
+    }
   } else if (params?.uid) {
     const userDeails = await getUserDetailsBy_UID(params.uid);
     if (userDeails) {
@@ -148,8 +153,8 @@ const refreshToken = async function(body) {
   return data;
 };
 
-const verifyJumperSavedToken = async function(body) {
-  const {status, data} = await fetchWaTemplates(1, body);
+const verifyJumperSavedToken = async function({uid_shop_name}) {
+  const {status, data} = await fetchWaTemplates(1, {uid_shop_name});
   return {status, verified: data.data && data.data.length};
 };
 
@@ -159,7 +164,7 @@ const fetchSocialChannels = async function(body) {
 };
 
 const fetchWaTemplates = async function(limit, auth) {
-  const response = await fetch(`fetch-whatsapp-templates?limit=${limit}`, auth);
+  const response = await fetch(`chat/fetch-whatsapp-templates?limit=${limit}`, auth);
   const data = await response.json();
   return {status: response.status, data};
 };

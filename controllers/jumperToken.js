@@ -47,7 +47,7 @@ const controller = {
   },
   generateToken: async (req, res) => {
     try {
-      const { userId, shopName: token } = req.body; 
+      const { userId, shopName: token } = req.body;
       let data = {
           time: Date(),
           userId: userId,

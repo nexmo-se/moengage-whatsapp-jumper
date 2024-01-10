@@ -24,6 +24,7 @@ router.post('/jumper_callback', jumperRequestHandler.jumperCallback);
 router.post('/send_whatsapp_task_queue', taskQueue.moEngageTaskQueue);
 router.post('/jumper_send_whatsapp', jumperMessage.sendWhatsAppMessage);
 router.get('/user', user.user);
+router.get('/getSocialChannels', social.getSocialChannels);
 
 
 

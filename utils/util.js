@@ -21,6 +21,9 @@ const util = {
     timeObject = new Date(timeObject.getTime() + milliseconds);
     return util.dateTimeIso(timeObject);
   },
+  findKeyValue: (obj, key, val) => {
+    return Object.keys(obj).filter(k => obj[key] === val && k ===key );
+  }
 };
 
 module.exports = util;

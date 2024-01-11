@@ -3,7 +3,7 @@ const util = require('../utils/util.js');
 const {postFormData, axios_error_logger} = require('../utils/api.js');
 
 const model = {
-  sendWhatsappMessage: async (template_id, number, msg_id, waba_number,_components, campaign_id, uid_shop_name) => {
+  sendWhatsappMessage: async (template_id, number, msg_id, waba_number,_components, campaign_id, jumperToken, uid_shop_name) => {
     var components = {'HEADER':[],'BODY':[],'BUTTONS':[]}
     if(_components){
       for(comp of _components){
@@ -59,15 +59,11 @@ const model = {
       };
   
     try {
-      const responsePromise = await postFormData('https://api.jumper.ai/chat/send-message', body, uid_shop_name);
+      const responsePromise = await postFormData('https://api.jumper.ai/chat/send-message', body, jumperToken, uid_shop_name);
       // const response = await axiosInstance.request(config);
       const response = await responsePromise.json();
       console.log(`msg_id:${msg_id} message send response:`, JSON.stringify(response))
       if (response.success == true){
-        // await dt_store("message_id_"+response.data.message_id, msg_id, {EX: 604800})
-        // await dt_store("conv_id_waba_"+response.data.conversationid, waba_number, {EX: 604800})
-        // await dt_store("conv_id_moengage_msg_id_"+response.data.conversationid, msg_id, {EX: 604800})
-        // await dt_store("conv_id_moengage_template_id_" + response.data.conversationid, template_id, { EX: 604800 })
   
         const message = {
           mo_msg_id: msg_id,

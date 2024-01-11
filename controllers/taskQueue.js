@@ -17,17 +17,9 @@ const controller = {
   moEngageTaskQueue: async (req, res) => {
     try {
       // queName is being used as QUEUE ID. QUEUE ID can contain letters ([A-Za-z]), numbers ([0-9]), or hyphens (-). The maximum length is 100 characters
-      const {userId, shopName} = req.query;
-      const uid_shop_name = `${userId}_${shopName}`;
-      
-      let token = ''; // moenage jumper app autherization token
-      if(req?.headers?.authorization){
-        token = req.headers.authorization.split(' ')[1];
-      } else {
-        token = api.getJumperToken({uid_shop_name});
-      }
+      const {userId, shopName, uid_shop_name, authToken} = req;
 
-      if(!token) {
+      if(!authToken) {
         console.error(`ERROR: token not found for ${uid_shop_name}, while adding task queue`);
         return;
       }
@@ -47,7 +39,7 @@ const controller = {
         console.error('error', JSON.stringify(error));
       }
 
-      await controller.createHttpTask({project, location, queName, payload, inSeconds, url, token});
+      await controller.createHttpTask({project, location, queName, payload, inSeconds, url, authToken});
 
       return res.status(200).json({'success': 'true'});
     } catch (error) {
@@ -55,7 +47,7 @@ const controller = {
       res.status(500).json({status: 'false', error: error});
     }
   },
-  createHttpTask: async ({project, location, queue, payload, inSeconds, url, token}) => {
+  createHttpTask: async ({project, location, queue, payload, inSeconds, url, authToken}) => {
     // Construct the fully qualified queue name.
     const parent = cloudTaskClient.queuePath(project, location, queue);
 
@@ -63,7 +55,7 @@ const controller = {
       httpRequest: {
         headers: {
           'Content-Type': 'application/json', // Set content type to ensure compatibility your application's request parsing
-          'Authorization': token
+          'Authorization': authToken
         },
         httpMethod: process.env.QUEUE_SERVICE_METHOD, // 'POST',
         url: url, // '/log_payload',

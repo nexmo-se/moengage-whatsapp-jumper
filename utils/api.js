@@ -40,9 +40,14 @@ const getJumperToken = async function(params) {
   }
 };
 
-const postFormData = async function (url, body, uid_shop_name) {
+const postFormData = async function (url, body, jumperToken, uid_shop_name) {
   try {
-    const token = await getJumperToken({uid_shop_name});
+    let token;
+    if(jumperToken) {
+      token = jumperToken;
+    } else {
+      token = await getJumperToken({uid_shop_name});
+    }
     const apiToCall = url;
     const formData = new FormData();
     Object.keys(body).forEach((key) => {

@@ -137,7 +137,7 @@ const get_templates = async () => {
 };
 
 const get_templates_by_uid_shop_name = async ({ uid_shop_name }) => {
-  const data = await dt_get({kind:'MOENGAGE_CONF', key: `${uid_shop_name}_templates`});
+  const data = await dt_get({kind:'MOENGAGE_WA_TEMPLATES', key: `${uid_shop_name}`});
   if (data && data.length && data[0]) {
     return data[0].value;
   }
@@ -208,7 +208,7 @@ const store_templates_by_uid_shop_name = async ({ templates, uid_shop_name }) =>
     value: templates,
     last_updated: currentDateTimeIso(),
   }
-  return await dt_store({kind: 'MOENGAGE_CONF', key:`${uid_shop_name}_templates`, data});
+  return await dt_store({kind: 'MOENGAGE_WA_TEMPLATES', key:`${uid_shop_name}`, data});
 };
 
 const store_wa_id = async ({whatsapp_id}) => {

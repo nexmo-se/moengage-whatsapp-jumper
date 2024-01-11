@@ -1,6 +1,6 @@
 require('dotenv').config();
 const jumperMessage = require('./jumperMessage');
-const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('../utils/api');
+const { axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('../utils/api');
 
 const controller = {
   getMessageStatusFromRequest: (req) => {

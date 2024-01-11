@@ -10,8 +10,7 @@ const controller = {
     try {
       console.log("post Whatsapp: ", JSON.stringify(req.body));
       let campaign_id = req.query.campaign_id, data = req.body, found = false;
-      const { userId, shopName } = req.query;
-      const uid_shop_name = `${userId}_${shopName}`;
+      const { userId, shopName, uid_shop_name, jumperToken } = req;
   
       const response = await get_templates_by_uid_shop_name({uid_shop_name}); // get templates cached in store
       let templates = response?.data?.data;
@@ -21,7 +20,7 @@ const controller = {
   
       if (!templates?.length || !foundTemplate) {
         console.log('fetch templates');
-        const responseWaTemplates = await fetchWaTemplates(1000, {uid_shop_name});
+        const responseWaTemplates = await fetchWaTemplates(1000, {token: jumperToken});
         templates = responseWaTemplates?.data?.data;
         await store_templates_by_uid_shop_name({ templates, uid_shop_name });
         foundTemplate = templates?.find(t => t.template_name == data.template.name);
@@ -39,7 +38,7 @@ const controller = {
             let components = null;
             if(data.template.components) components = data.template.components
   
-            const dat = await messageModel.sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id, uid_shop_name);
+            const dat = await messageModel.sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id, jumperToken, uid_shop_name);
             return res.json(dat).end
           }
         })

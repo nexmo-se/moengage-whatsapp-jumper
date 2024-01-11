@@ -9,10 +9,8 @@ const controller = {
   },
   fetchWaTemplates: async (req, res) => {
     console.log('fetchTemplates');
-    const objAuth = util.getReqToken(req);
-    console.log(objAuth);
     const limit = req && req.query && req.query.limit || 'all';
-    const {status, data} = await api.fetchWaTemplates(limit, objAuth);
+    const {status, data} = await api.fetchWaTemplates(limit, {token: req.jumperToken});
     res.status(status || 500).json(data);
   },
   fetchWaTemplate: async (req, res) => {

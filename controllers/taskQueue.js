@@ -1,5 +1,6 @@
 const {CloudTasksClient} = require('@google-cloud/tasks');
 const util = require('../utils/util');
+const api = require('../utils/api');
 
 const cloudTaskClientDetails = {
   projectId: process.env.DT_PROJECT_ID,
@@ -16,8 +17,22 @@ const controller = {
   moEngageTaskQueue: async (req, res) => {
     try {
       // queName is being used as QUEUE ID. QUEUE ID can contain letters ([A-Za-z]), numbers ([0-9]), or hyphens (-). The maximum length is 100 characters
-      const inArguments = req.body.inArguments[0];
       const {userId, shopName} = req.query;
+      const uid_shop_name = `${userId}_${shopName}`;
+      
+      let token = ''; // moenage jumper app autherization token
+      if(req?.headers?.authorization){
+        token = req.headers.authorization.split(' ')[1];
+      } else {
+        token = api.getJumperToken({uid_shop_name});
+      }
+
+      if(!token) {
+        console.error(`ERROR: token not found for ${uid_shop_name}, while adding task queue`);
+        return;
+      }
+
+      // const { token } = util.getReqToken();
       const queName = `MOENGAGE-${userId}-${shopName}`.replace(/[^a-zA-Z0-9-]/g, "").substring(0, 99);
 
       const project = process.env.DT_PROJECT_ID;
@@ -32,18 +47,17 @@ const controller = {
         console.error('error', JSON.stringify(error));
       }
 
-      await controller.createHttpTask({project, location, queName, payload, inSeconds, url});
+      await controller.createHttpTask({project, location, queName, payload, inSeconds, url, token});
 
       return res.status(200).json({'success': 'true'});
     } catch (error) {
-      console.error('error at sfmcExecuteTaskQueue controller', error);
+      console.error('error at taskQueue controller', error);
       res.status(500).json({status: 'false', error: error});
     }
   },
-  createHttpTask: async ({project, location, queue, payload, inSeconds, url}) => {
+  createHttpTask: async ({project, location, queue, payload, inSeconds, url, token}) => {
     // Construct the fully qualified queue name.
     const parent = cloudTaskClient.queuePath(project, location, queue);
-    const { token } = util.getReqToken();
 
     const task = {
       httpRequest: {

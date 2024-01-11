@@ -23,9 +23,8 @@ const controller = {
         console.log('fetch templates');
         const responseWaTemplates = await fetchWaTemplates(1000, {uid_shop_name});
         templates = responseWaTemplates?.data?.data;
-        console.log(templates);
         await store_templates_by_uid_shop_name({ templates, uid_shop_name });
-        foundTemplate = templates?.find(t => t.template_name == data.template.name)
+        foundTemplate = templates?.find(t => t.template_name == data.template.name);
       }
   
   

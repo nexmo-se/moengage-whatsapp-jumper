@@ -47,12 +47,13 @@ const controller = {
   },
   generateToken: async (req, res) => {
     try {
+      console.log(process.env.TOKEN_KEY);
       const { userId, shopName: token } = req.body;
       let data = {
           time: Date(),
           userId: userId,
       } 
-      const generatedToken = jwt.sign(data, token);
+      const generatedToken = jwt.sign(data, process.env.TOKEN_KEY);
       res.status(200).send({token: generatedToken});
     } catch (error) {
       console.error(error);

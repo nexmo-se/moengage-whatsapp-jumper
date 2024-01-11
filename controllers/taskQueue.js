@@ -17,9 +17,9 @@ const controller = {
   moEngageTaskQueue: async (req, res) => {
     try {
       // queName is being used as QUEUE ID. QUEUE ID can contain letters ([A-Za-z]), numbers ([0-9]), or hyphens (-). The maximum length is 100 characters
-      const {userId, shopName, uid_shop_name, authToken} = req;
+      const {userId, shopName, uid_shop_name, mo_engage_jumper_app_token} = req;
 
-      if(!authToken) {
+      if(!mo_engage_jumper_app_token) {
         console.error(`ERROR: token not found for ${uid_shop_name}, while adding task queue`);
         return;
       }
@@ -39,7 +39,7 @@ const controller = {
         console.error('error', JSON.stringify(error));
       }
 
-      await controller.createHttpTask({project, location, queName, payload, inSeconds, url, authToken});
+      await controller.createHttpTask({project, location, queName, payload, inSeconds, url, mo_engage_jumper_app_token});
 
       return res.status(200).json({'success': 'true'});
     } catch (error) {
@@ -47,21 +47,23 @@ const controller = {
       res.status(500).json({status: 'false', error: error});
     }
   },
-  createHttpTask: async ({project, location, queue, payload, inSeconds, url, authToken}) => {
+  createHttpTask: async ({project, location, queName, payload, inSeconds, url, mo_engage_jumper_app_token}) => {
+    console.log(JSON.stringify({project, location, queName}));
     // Construct the fully qualified queue name.
-    const parent = cloudTaskClient.queuePath(project, location, queue);
+    const parent = cloudTaskClient.queuePath(project, location, queName);
 
     const task = {
       httpRequest: {
         headers: {
           'Content-Type': 'application/json', // Set content type to ensure compatibility your application's request parsing
-          'Authorization': authToken
+          'Authorization': mo_engage_jumper_app_token
         },
         httpMethod: process.env.QUEUE_SERVICE_METHOD, // 'POST',
         url: url, // '/log_payload',
       },
     };
 
+    console.log('payload', payload);
     if (payload) {
       task.httpRequest.body = Buffer.from(payload).toString('base64');
     }

@@ -39,7 +39,7 @@ const controller = {
             if(data.template.components) components = data.template.components
   
             const dat = await messageModel.sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id, jumperToken, uid_shop_name);
-            return res.json(dat).end
+            return res.status(200).json({status: "success", dat});
           }
         })
       }

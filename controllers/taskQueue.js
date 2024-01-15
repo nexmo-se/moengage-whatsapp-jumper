@@ -41,7 +41,7 @@ const controller = {
 
       await controller.createHttpTask({project, location, queName, payload, inSeconds, url, mo_engage_jumper_app_token});
 
-      return res.status(200).json({'success': 'true'});
+      return res.status(200).json({status: "success"});
     } catch (error) {
       console.error('error at taskQueue controller', error);
       res.status(500).json({status: 'false', error: error});

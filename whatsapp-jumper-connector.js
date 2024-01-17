@@ -10,8 +10,9 @@ const moengage_callback = process.env.MOENGAGE_CALLBACK_URL
 var morgan = require('morgan')
 var timeout = require('connect-timeout')
 const {addTask} = require('./http_task_que')
+const jwt = require('jsonwebtoken');
 const {getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id} = require('./datastore');
-const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('./api');
+const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('../utils/api');
 
 // The kind for the new entity
 const kind = process.env.DT_KIND;
@@ -80,6 +81,20 @@ ipWhitelist = async (req, res, next) => {
 
 app.get('/', (req, res) => {
   res.json(200);
+});
+
+app.post("/generateToken", (req, res) => {
+  try {
+    const { userId, token } = req.body; 
+    let data = {
+        time: Date(),
+        userId: userId,
+    } 
+    const generatedToken = jwt.sign(data, token);
+    res.status(200).send({token: generatedToken});
+  } catch (error) {
+    res.status(500).send({ error: JSON.stringify(error) });
+  }
 });
 
 app.get('/refresh_token', async (req, res) => {

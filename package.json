@@ -1,10 +1,10 @@
 {
   "name": "jumper-connect",
   "version": "1.0.0",
-  "main": "whatsapp-jumper-connector.js",
+  "main": "server/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node whatsapp-jumper-connector.js",
+    "start": "node server/index.js",
     "docker": "docker build -t moengage .",
     "deployImage": "gcloud builds submit --tag gcr.io/jumperdevnew/moengage --project=jumperdevnew"
   },
@@ -18,9 +18,11 @@
     "axios": "^1.4.0",
     "axios-curlirize": "^2.0.0",
     "connect-timeout": "^1.9.0",
+    "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "form-data": "^4.0.0",
+    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "node-fetch": "^2.7.0",
     "node-schedule": "^2.1.1",

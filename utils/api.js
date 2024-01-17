@@ -1,9 +1,8 @@
 const nodeFetch = require("node-fetch");
 const FormData = require("form-data");
 const axios = require('axios');
-const { getAuthToken, get_message_by_wa_message_id } = require('../datastore');
 const moengage_callback = process.env.MOENGAGE_CALLBACK_URL;
-const {getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name} = require('../datastore/datastore.js');
+const {getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name, get_message_by_wa_message_id} = require('../datastore/datastore.js');
 const apiRoot = 'https://api.jumper.ai/';
 
 const Agent = require('agentkeepalive');
@@ -116,7 +115,8 @@ const axios_error_logger = (url, error) => {
 }
 
 const updateStatusToMoEngage = async function(messageStatus, wa_message_id) {
-  const { mo_msg_id } = await get_message_by_wa_message_id({ wa_message_id }) || {};
+  const { mo_msg_id, uid_shop_name } = await get_message_by_wa_message_id({ wa_message_id }) || {};
+  const { dlr_web_hook_url } = await getUserDetailsBy_uid_shop_name(uid_shop_name)
   if (mo_msg_id) {
     console.log('MoEngage Message Id Found by wa_message_id:' + wa_message_id)
     const data = {
@@ -129,7 +129,7 @@ const updateStatusToMoEngage = async function(messageStatus, wa_message_id) {
       ]
     }
     console.log('Update MoEngage Status data:', JSON.stringify(data))
-    return await axiosApiCall(moengage_callback, data, 'post');
+    return await axiosApiCall(dlr_web_hook_url || moengage_callback, data, 'post');
   } else {
     console.error('MoEngage Message Id Not Found by wa_message_id:' + wa_message_id)
     return { error: true }

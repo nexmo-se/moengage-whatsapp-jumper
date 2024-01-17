@@ -22,7 +22,7 @@ router.get('/user', user.user);
 router.get('/refresh_token', jumperToken.refreshAllToken);
 router.get('/refresh_single_token', jumperToken.refreshToken);
 router.get('/list_jumper_templates', auth, jumperTemplate.fetchWaTemplates);
-router.post('/jumper_callback', auth, jumperRequestHandler.jumperCallback);
+router.post('/jumper_callback', jumperRequestHandler.jumperCallback);
 router.post('/send_whatsapp_task_queue', auth, taskQueue.moEngageTaskQueue);
 router.post('/jumper_send_whatsapp', auth, jumperMessage.sendWhatsAppMessage);
 router.get('/getSocialChannels', auth, social.getSocialChannels);

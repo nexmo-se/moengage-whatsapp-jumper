@@ -36,7 +36,7 @@ const controller = {
       return {}
     }
   },
-  jumperCallback: async (req) => {
+  jumperCallback: async (req, res) => {
     console.log('callback init', JSON.stringify(req.body))
     const {status, wa_message_id} = controller.getMessageStatusFromRequest(req);
     console.log('status:', JSON.stringify({ status, wa_message_id }));

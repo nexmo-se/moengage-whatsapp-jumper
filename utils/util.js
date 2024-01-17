@@ -23,6 +23,9 @@ const util = {
   },
   findKeyValue: (obj, key, val) => {
     return Object.keys(obj).filter(k => obj[key] === val && k ===key );
+  },
+  currentUtcTime: () => {
+    return new Date(new Date().toUTCString());
   }
 };
 

@@ -3,6 +3,7 @@ const {dt_store, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name} = require
 const jumperUser = require('./user.js');
 const userModel = require('../model/user.js');
 const jwt = require('jsonwebtoken');
+const util = require('../utils/util.js');
 
 const controller = {
   refreshToken: async (req, res) => {
@@ -25,7 +26,7 @@ const controller = {
       try {
         const is_valid_token = verified == 1;
         let data = await getUserDetailsBy_uid_shop_name(uid_shop_name);
-        data = {...data, ...{is_valid_token: is_valid_token}};
+        data = {...data, ...{is_valid_token: is_valid_token, last_updated_date: util.currentUtcTime()}};
         await dt_store({kind: 'MOENGAGE_CONF', key: uid_shop_name, data});
         console.log(`verify jumper token succeed for uid_shop_name: ${uid_shop_name}`);
       } catch (error) {

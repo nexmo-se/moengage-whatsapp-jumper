@@ -1,10 +1,18 @@
 const {dt_store, dt_get, getUsersToUpdateToken, getUsersByToken, store_message} = require('../datastore/datastore.js');
 const util = require('../utils/util.js');
-const {postFormData, axios_error_logger} = require('../utils/api.js');
+const {postFormData, axios_error_logger, fetchWaTemplate} = require('../utils/api.js');
 
 const model = {
-  sendWhatsappMessage: async (template_id, number, msg_id, waba_number,_components, campaign_id, jumperToken, uid_shop_name) => {
+  sendWhatsappMessage: async (template_id, number, msg_id, waba_number,_components, campaign_id, jumperToken, uid_shop_name, jumperTemplate) => {
     var components = {'HEADER':[],'BODY':[],'BUTTONS':[]}
+    let jumperTemplateAllButtons = [];
+
+    // get all buttons from jumper template
+    if (jumperTemplate?.message?.BUTTONS) {
+      jumperTemplateAllButtons = model.buttonsListHandler(jumperTemplate.message.BUTTONS);
+    }
+
+    // generate message from MoEngage template parameters
     if(_components){
       for(comp of _components){
         if(comp.type=="header"){
@@ -45,6 +53,22 @@ const model = {
         }
       }
     }
+
+    // code for bot and product flow buttons
+    if(!components.BUTTONS.length && jumperTemplateAllButtons.length) {
+      jumperTemplateAllButtons.forEach((button) => {
+        if (button.static != true) {
+          components.BUTTONS.push(
+            {
+              "type": "button",
+              "sub_type": button.sub_type,
+              "index": button.index,
+              "parameters": button.parameters
+            }
+          )
+        }
+      });
+    }
   
     console.log(`msg_id:${msg_id} Generated Components`, JSON.stringify(components))
   
@@ -72,7 +96,8 @@ const model = {
           wa_message_id: response.message_id,
           wa_conv_id: response.conversationid,
           campaign_id: campaign_id || '',
-          uid_shop_name
+          uid_shop_name,
+          receiver_number: number.replace("+", "")
         }
   
         await store_message(message)
@@ -83,7 +108,39 @@ const model = {
       axios_error_logger('https://api.jumper.ai/chat/send-message',error)
       return {"status":"error","message":"failed sending message"}
     }
-  }
+  },
+  buttonsListHandler(messageButtons) {
+    let buttons = [];
+    if (messageButtons) {
+      messageButtons.forEach((messageButton, index) => {
+        if (messageButton.type == 'URL') {
+          const isStatic = !messageButton.url.includes("{");
+          let button = { ...messageButton, ...{ sub_type: 'url', type: 'button', index, static: isStatic, parameters: [{ "type": "text", "text": "" }] } };
+          button.text = button.text || 'Web Url';
+          buttons.push(button);
+        } else if (messageButton.type == 'QUICK_REPLY') {
+          let payload = {
+            parameters: [
+              {
+                "type": "payload",
+                "payload": messageButton.payload
+              }
+            ]
+          }
+          let button = { ...messageButton, ...{ sub_type: 'quick_reply', type: 'button', index, static: false }, ...payload };
+          button.text = button.text || 'Quick Reply';
+          buttons.push(button);
+        } else if (messageButton.type == 'PHONE_NUMBER') {
+          let button = { ...messageButton, ...{ sub_type: 'phone_number', type: 'button', index, static: true } };
+          button.text = button.text || 'Phone Number';
+          buttons.push(button);
+        } else {
+          buttons.push(messageButton);
+        }
+      });
+    }
+    return buttons;
+  },
 };
 
 module.exports = model;

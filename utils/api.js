@@ -7,6 +7,7 @@ const apiRoot = 'https://api.jumper.ai/';
 
 const Agent = require('agentkeepalive');
 const { exit } = require('process');
+const util = require("./util.js");
 const keepAliveAgent = new Agent({
   maxSockets: parseInt(process.env.MAX_SOCKETS),
   maxFreeSockets: parseInt(process.env.MAX_FREE_SOCKETS),
@@ -114,19 +115,41 @@ const axios_error_logger = (url, error) => {
   //console.log(error.config);
 }
 
-const updateStatusToMoEngage = async function(messageStatus, wa_message_id) {
-  const { mo_msg_id, uid_shop_name } = await get_message_by_wa_message_id({ wa_message_id }) || {};
+const updateStatusToMoEngage = async function({messageStatus, wa_message_id, message}) {
+  const { mo_msg_id, uid_shop_name, receiver_number, mo_waba_number } = await get_message_by_wa_message_id({ wa_message_id }) || {};
   const { dlr_web_hook_url } = await getUserDetailsBy_uid_shop_name(uid_shop_name)
   if (mo_msg_id) {
     console.log('MoEngage Message Id Found by wa_message_id:' + wa_message_id)
-    const data = {
-      statuses: [
-        {
-          msg_id: mo_msg_id,
-          status: messageStatus,
-          timestamp: Date.now()
-        }
-      ]
+    let data;
+    console.log('messageStatus', messageStatus)
+    if(messageStatus == 'clicks') {
+      data = {
+          from: receiver_number.replace("+", ""),
+          waba_number: mo_waba_number,
+          timestamp: util.currentUtcTime(),
+          // type: "text | button",
+          type: "text",
+          context: {
+              "msg_id": mo_msg_id
+          },
+          // text: {
+          //     "body": message
+          // }
+          button: {
+              // "payload": "{'orderid' : '12345', 'reply': 'yes'}",
+              "text": message
+          }
+      }
+    } else {
+      data = {
+        statuses: [
+          {
+            msg_id: mo_msg_id,
+            status: messageStatus,
+            timestamp: Date.now()
+          }
+        ]
+      } 
     }
     console.log('Update MoEngage Status data:', JSON.stringify(data))
     return await axiosApiCall(dlr_web_hook_url || moengage_callback, data, 'post');
@@ -175,9 +198,9 @@ const fetchWaTemplates = async function(limit, auth) {
 };
 
 const fetchWaTemplate = async function(id, auth) {
-  const response = await fetch(`get-whatsapp-template?id=${id}`, auth);
+  const response = await fetch(`chat/get-whatsapp-template?id=${id}`, auth);
   const data = await response.json();
   return data;
 };
 
-module.exports = { postFormData, refreshToken, verifyJumperSavedToken, fetchSocialChannels, fetchWaTemplates, axios_error_logger, axiosApiCall, axiosInstance, updateStatusToMoEngage, getJumperToken };
+module.exports = { postFormData, refreshToken, verifyJumperSavedToken, fetchSocialChannels, fetchWaTemplates, axios_error_logger, axiosApiCall, axiosInstance, updateStatusToMoEngage, getJumperToken, fetchWaTemplate };

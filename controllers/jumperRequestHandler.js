@@ -26,7 +26,12 @@ const controller = {
           wa_message_id = data?.entry[0]?.changes[0]?.value?.statuses[0]?.id;
           return {status, wa_message_id};
         }
-        
+
+      // need more payload to segregate click event
+      } else if(type == 'NEW' && subscription_type == 'livechat' && !!data.message && data.replytomessage?.replied && data.replytomessage?.messageid){
+        wa_message_id = data.replytomessage?.messageid;
+        return { status: 'clicks', wa_message_id, message: data.message }
+
       } else {
         return {}
       }
@@ -38,11 +43,11 @@ const controller = {
   },
   jumperCallback: async (req, res) => {
     console.log('callback init', JSON.stringify(req.body))
-    const {status, wa_message_id} = controller.getMessageStatusFromRequest(req);
+    const {status, wa_message_id, message} = controller.getMessageStatusFromRequest(req);
     console.log('status:', JSON.stringify({ status, wa_message_id }));
 
     if(status && wa_message_id) {
-      const response = await updateStatusToMoEngage(status, wa_message_id)
+      const response = await updateStatusToMoEngage({messageStatus: status, wa_message_id, message})
       const responseData = response?.data;
       console.log('updateStatusToMoEngage response ', JSON.stringify(responseData));
       if (responseData.status == "success") {

@@ -442,7 +442,8 @@ async function sendWhatsappMessage(template_id, number, msg_id, waba_number,_com
         mo_template_id: template_id,
         wa_message_id: response.message_id,
         wa_conv_id: response.conversationid,
-        campaign_id: campaign_id || ''
+        campaign_id: campaign_id || '',
+        receiver_number: number
       }
 
       await store_message(message)

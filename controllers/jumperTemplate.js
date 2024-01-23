@@ -14,8 +14,7 @@ const controller = {
     res.status(status || 500).json(data);
   },
   fetchWaTemplate: async (req, res) => {
-    const objAuth = util.getReqToken(req);
-    const data = await api.fetchWaTemplate(req.query.id, objAuth);
+    const data = await api.fetchWaTemplate(req.query.id, {token: req.jumperToken});
     res.status(200).json(data);
   },
 };

@@ -41,7 +41,6 @@ const controller = {
             // fetch jumper template details
             const foundTemplateId = foundTemplate?.templates[0]?.id;
             const { data: jumperTemplate } = await api.fetchWaTemplate(foundTemplateId, {token: jumperToken});
-            console.log('jumper Template', JSON.stringify(jumperTemplate))
 
             const dat = await messageModel.sendWhatsappMessage(template_language.id, data.to, data.msg_id, data.from, components, campaign_id, jumperToken, uid_shop_name, jumperTemplate);
             return res.status(200).json({status: "success", dat});

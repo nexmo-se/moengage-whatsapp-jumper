@@ -18,9 +18,15 @@ const model = {
         if(comp.type=="header"){
           var p = new Array()
           for(params of comp.parameters){
-            h = {}
-            link = params["image"]["link"]
-            h[link] = "image"
+            let h = {}, link;
+            if(params?.image?.link) {
+              link = params?.image?.link;
+              h[link] = "image"
+            }
+            if(params?.video?.link) {
+              link = params?.video?.link;
+              h[link] = "video"
+            }
             components.HEADER.push(h)
           }
         }

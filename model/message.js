@@ -32,7 +32,9 @@ const model = {
               h[link] = "document";
               components.filename = "documents";
             }
-            components.HEADER.push(h)
+            if(Object.keys(h).length) {
+              components.HEADER.push(h)
+            }
           }
         }
         if(comp.type=="body"){

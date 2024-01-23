@@ -27,6 +27,11 @@ const model = {
               link = params?.video?.link;
               h[link] = "video"
             }
+            if(params?.document?.link) {
+              link = params?.document?.link;
+              h[link] = "document";
+              components.filename = "documents";
+            }
             components.HEADER.push(h)
           }
         }

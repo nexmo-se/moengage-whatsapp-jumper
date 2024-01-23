@@ -61,8 +61,12 @@ const model = {
           //   }
           
           comp.index = Number(comp.index)
-          
-          components.BUTTONS.push(comp)
+
+          // push button if not static 
+          const jumperButton = jumperTemplateAllButtons.find((button) => button.index == comp.index)
+          if(jumperButton.static != true) {
+            components.BUTTONS.push(comp)
+          }
         }
       }
     }

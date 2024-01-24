@@ -87,22 +87,27 @@ const axios_error_logger = (url, error) => {
 }
 
 const updateStatusToMoEngage = async function(messageStatus, wa_message_id) {
-  const { mo_msg_id } = await get_message_by_wa_message_id({ wa_message_id }) || {};
-  if (mo_msg_id) {
-    console.log('MoEngage Message Id Found by wa_message_id:' + wa_message_id)
-    const data = {
-      statuses: [
-        {
-          msg_id: mo_msg_id,
-          status: messageStatus,
-          timestamp: Date.now()
-        }
-      ]
+  try {
+    const { mo_msg_id } = await get_message_by_wa_message_id({ wa_message_id }) || {};
+    if (mo_msg_id) {
+      console.log('MoEngage Message Id Found by wa_message_id:' + wa_message_id)
+      const data = {
+        statuses: [
+          {
+            msg_id: mo_msg_id,
+            status: messageStatus,
+            timestamp: Date.now()
+          }
+        ]
+      }
+      console.log('Update MoEngage Status data:', JSON.stringify(data))
+      return await axiosApiCall(moengage_callback, data, 'post');
+    } else {
+      console.error('MoEngage Message Id Not Found by wa_message_id:' + wa_message_id)
+      return { error: true }
     }
-    console.log('Update MoEngage Status data:', JSON.stringify(data))
-    return await axiosApiCall(moengage_callback, data, 'post');
-  } else {
-    console.error('MoEngage Message Id Not Found by wa_message_id:' + wa_message_id)
+  } catch (error) {
+    console.error(error)
     return { error: true }
   }
 }

@@ -90,7 +90,7 @@ const model = {
     console.log(`msg_id:${msg_id} Generated Components`, JSON.stringify(components))
   
     const body = {
-        to: number,
+        to: (number+"").replace("+", ""),
         channel: 'whatsapp',
         message: `s3ndt3mpl4te_${template_id}`,
         messagetype: 'template',

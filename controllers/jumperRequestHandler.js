@@ -50,7 +50,7 @@ const controller = {
       const response = await updateStatusToMoEngage({messageStatus: status, wa_message_id, message})
       const responseData = response?.data;
       console.log('updateStatusToMoEngage response ', JSON.stringify(responseData));
-      if (responseData.status == "success") {
+      if (responseData?.status == "success") {
         console.log(`${wa_message_id} successfully status updated as ${status}`)
         return res.json({"status":"success","message":`MoEngage status updated as "${status}" for message id: ${wa_message_id}`})
       }

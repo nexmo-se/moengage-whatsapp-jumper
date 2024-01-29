@@ -117,6 +117,9 @@ const axios_error_logger = (url, error) => {
 
 const updateStatusToMoEngage = async function({messageStatus, wa_message_id, message}) {
   const { mo_msg_id, uid_shop_name, receiver_number, mo_waba_number } = await get_message_by_wa_message_id({ wa_message_id }) || {};
+  if(!uid_shop_name) {
+    return { error: true };
+  }
   const { dlr_web_hook_url } = await getUserDetailsBy_uid_shop_name(uid_shop_name)
   if (mo_msg_id) {
     console.log('MoEngage Message Id Found by wa_message_id:' + wa_message_id)

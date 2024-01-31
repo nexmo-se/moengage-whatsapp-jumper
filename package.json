@@ -6,6 +6,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server/index.js",
     "docker": "docker build -t moengage .",
+    "docker-us": "docker build -t moengage-us .",
+    "docker-eu": "docker build -t moengage-eu .",
     "deployImage": "gcloud builds submit --tag gcr.io/jumperdevnew/moengage --project=jumperdevnew"
   },
   "author": "",

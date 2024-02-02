@@ -1,6 +1,8 @@
 require('dotenv').config();
 const jumperMessage = require('./jumperMessage');
 const { axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('../utils/api');
+const {get_message_by_wa_message_id, store_message} = require('../datastore/datastore.js');
+
 
 const controller = {
   getMessageStatusFromRequest: (req) => {
@@ -46,7 +48,29 @@ const controller = {
     const {status, wa_message_id, message} = controller.getMessageStatusFromRequest(req);
     console.log('status:', JSON.stringify({ status, wa_message_id }));
 
+    try {
+      // update message to store
+      const objMessage = await get_message_by_wa_message_id({wa_message_id}) || {};
+      if (objMessage.wa_message_id) {
+        if(!objMessage.status) {
+          objMessage.status = {};
+        }
+        objMessage.status[status] = true;
+        objMessage.final_status = status;
+        console.log('input to update message status', JSON.stringify(objMessage));
+        const data = await store_message(objMessage);
+
+        console.log('response of update message status in data store:', JSON.stringify(data));
+      } else {
+        console.error('Wa_Message_Id Not Found by wa_message_id:' + objMessage.wa_message_id);
+      }
+    } catch (error) {
+      console.log("error while updating message status in data store", error);
+    }
+
+    // update message to mo engage
     if(status && wa_message_id) {
+      // await store_message(message)
       const response = await updateStatusToMoEngage({messageStatus: status, wa_message_id, message})
       const responseData = response?.data;
       console.log('updateStatusToMoEngage response ', JSON.stringify(responseData));

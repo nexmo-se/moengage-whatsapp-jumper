@@ -219,7 +219,7 @@ const store_wa_id = async ({whatsapp_id}) => {
   return await dt_store({kind: 'MOENGAGE_CONF', key:'whatsapp_id', data});
 };
 
-const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_message_id, wa_conv_id, campaign_id, uid_shop_name, receiver_number }) => {
+const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_message_id, wa_conv_id, campaign_id, uid_shop_name, receiver_number, final_status, status }) => {
   const data = {
     mo_msg_id,
     mo_waba_number,
@@ -229,7 +229,9 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
     created_date: currentDateTimeIso(),
     campaign_id,
     uid_shop_name,
-    receiver_number
+    receiver_number,
+    final_status: final_status || "-",
+    status: status || {}
   }
   console.log(JSON.stringify(data));
   return await dt_store({kind: 'MOENGAGE_MESSAGES', key:wa_message_id, data});

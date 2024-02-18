@@ -51,7 +51,7 @@ const controller = {
     try {
       // update message to store
       const objMessage = await get_message_by_wa_message_id({wa_message_id}) || {};
-      if (objMessage.wa_message_id) {
+      if (status && objMessage?.wa_message_id) {
         if(!objMessage.status) {
           objMessage.status = {};
         }
@@ -62,7 +62,7 @@ const controller = {
 
         console.log('response of update message status in data store:', JSON.stringify(data));
       } else {
-        console.error('Wa_Message_Id Not Found by wa_message_id:' + objMessage.wa_message_id);
+        console.error('Wa_Message_Id Not Found by wa_message_id:' + objMessage?.wa_message_id);
       }
     } catch (error) {
       console.log("error while updating message status in data store", error);

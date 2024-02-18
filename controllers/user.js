@@ -9,13 +9,20 @@ const controller = {
       const uid_shop_name = `${user_uid}_${shop_name}`;
       console.log('>>> new user', uid_shop_name);
 
+      // validate details
+      const {tokenValid, refreshTokenValid, clientKeyValid} = await userModel.verifyTokenDetails({token, refresh_token, client_key});
+      if(!tokenValid || !refreshTokenValid || !clientKeyValid) {
+        res.status(200).json({status: 'success', validation: {tokenValid, refreshTokenValid, clientKeyValid} });
+        return;
+      }
+
       if (!user_uid) {
         return res.sendStatus(400);
       }
       // console.log({kind: 'MOENGAGE_CONF', key: uid_shop_name, data: {uid_shop_name, token, refresh_token, client_key, secret_key, is_valid_token, token_expiry_time: util.dateTimeIso()}});
       await dt_store({kind: 'MOENGAGE_CONF', key: uid_shop_name, data: {uid_shop_name, user_uid, shop_name, token, refresh_token, mo_engage_jumper_app_token, client_key, secret_key, is_valid_token, dlr_web_hook_url, sender_name, wa_business_number, token_expiry_time: util.dateTimeIso(), last_updated_date: util.currentUtcTime()}});
       const updateTokenForUser = await userModel.refreshToken({token, refresh_token, client_key, secret_key});
-      res.status(200).json({status: 'success', updateTokenForUser});
+      res.status(200).json({status: 'success', data: updateTokenForUser});
       // res.status(200).json({status: 'success'});
     } catch (error) {
       console.error('error at newUser controller', error);

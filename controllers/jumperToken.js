@@ -1,5 +1,5 @@
 const api = require('../utils/api.js');
-const {dt_store, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name} = require('../datastore/datastore.js');
+const {dt_store, dt_get, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name} = require('../datastore/datastore.js');
 const jumperUser = require('./user.js');
 const userModel = require('../model/user.js');
 const jwt = require('jsonwebtoken');
@@ -37,7 +37,6 @@ const controller = {
 
     return res.status(status || 500).json({verified});
   },
-
   refreshAllToken: async (req, res) => {
     try {
       const data = await userModel.refreshAllToken();
@@ -60,7 +59,7 @@ const controller = {
       console.error(error);
       res.status(500).send({ error: JSON.stringify(error) });
     }
-  }
+  },
 
 };
 

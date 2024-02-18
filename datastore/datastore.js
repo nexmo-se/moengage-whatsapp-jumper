@@ -230,7 +230,7 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
     campaign_id,
     uid_shop_name,
     receiver_number,
-    final_status: final_status || "-",
+    final_status: final_status || "",
     status: status || {}
   }
   console.log(JSON.stringify(data));

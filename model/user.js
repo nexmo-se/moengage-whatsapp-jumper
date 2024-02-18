@@ -1,6 +1,7 @@
 const {dt_store, dt_get, getUsersToUpdateToken, getUsersByToken} = require('../datastore/datastore.js');
 const util = require('../utils/util');
 const api = require('../utils/api');
+const jwt = require('jsonwebtoken');
 
 const model = {
   refreshAllToken: async (res, response) => {
@@ -71,6 +72,57 @@ const model = {
     }
     return usersUpdatedTokens;
   },
+  verifyTokenDetails: async ({ token, refresh_token, client_key }) => {
+    let tokenValid = true, refreshTokenValid = true, clientKeyValid = true, scretKeyValid = true;
+    let tokenDecode = null;
+
+    // token validation
+    try {
+      tokenDecode = jwt.decode(token, {complete: true})
+      if(!tokenDecode?.payload?.merchant_id) {
+        tokenValid = false
+        console.log('Invalid token');
+      }
+      const response = await api.fetchWaTemplates(10, {token: token});
+      if(response?.data?.success != true) {
+        tokenValid = false;
+        console.log('Invalid token: fetch template failed');
+      }
+    } catch (error) {
+      tokenValid = false
+      console.error(error);
+    }
+
+    // refresh token validation
+    try {
+      if(tokenDecode?.payload?.merchant_id) {
+        const refreshTokenDecode = jwt.decode(refresh_token, { complete: true });
+        if(!(refreshTokenDecode.payload.merchant_id && tokenDecode?.payload?.merchant_id == refreshTokenDecode?.payload?.merchant_id)) {
+          refreshTokenValid = false;
+        }
+      } else {
+        refreshTokenValid = false;
+      }
+    } catch (error) {
+      console.error(error);
+      refreshTokenValid = false;
+    }
+
+    // validate client key
+    if(process.env.IS_PROD) {
+      try {
+        const clientDetails = await dt_get({kind:  'ApigeeClientIDs', key: Number(tokenDecode?.payload?.merchant_id) } );
+        if(!(client_key && clientDetails && clientDetails[0] && clientDetails[0]?.client_id == client_key)) {
+          clientKeyValid = false;
+        }
+      } catch (error) {
+        console.error(error);
+        clientKeyValid = false;
+      }
+    }
+
+    return({tokenValid, refreshTokenValid, clientKeyValid});
+  }
 };
 
 module.exports = model;

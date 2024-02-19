@@ -37,6 +37,16 @@ const controller = {
 
     return res.status(status || 500).json({verified});
   },
+  verifyToken: async (req, res) => {
+    try {
+      const { token } = req.body;
+      const {status, data} = api.fetchWaTemplates(10, { token });
+      const validToken = data.data && data.data.length;
+      return res.status(status || 500).json({validToken});
+    } catch (error) {
+      return res.status(500).json({error});
+    }
+  },
   refreshAllToken: async (req, res) => {
     try {
       const data = await userModel.refreshAllToken();

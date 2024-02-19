@@ -17,6 +17,7 @@ router.post('/verifyJumperSavedToken', jumperToken.verifyJumperSavedToken);
 router.post('/generateToken', jumperToken.generateToken);
 router.post('/user', jumperUser.newUser);
 router.get('/user', user.user);
+router.post('/verifyToken', jumperToken.verifyToken);
 
 // routes for the services being called from MoEngage
 router.get('/refresh_token', jumperToken.refreshAllToken);

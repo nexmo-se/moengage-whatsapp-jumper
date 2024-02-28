@@ -40,10 +40,11 @@ const controller = {
   verifyToken: async (req, res) => {
     try {
       const { token } = req.body;
-      const {status, data} = api.fetchWaTemplates(10, { token });
-      const validToken = data.data && data.data.length;
+      const {status, data} = await api.fetchWaTemplates(10, { token });
+      const validToken = data.data && !!data.data.length;
       return res.status(status || 500).json({validToken});
     } catch (error) {
+      console.error(error);
       return res.status(500).json({error});
     }
   },

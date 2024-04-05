@@ -11,13 +11,14 @@ const social = require('../controllers/social');
 const jumperRequestHandler = require('../controllers/jumperRequestHandler');
 const user = require('../controllers/user');
 const auth = require("../middleware/auth"); 
+const jumperAuth = require("../middleware/jumperAuth"); 
 
 // routes for the services being called from UI
-router.post('/verifyJumperSavedToken', jumperToken.verifyJumperSavedToken);
-router.post('/generateToken', jumperToken.generateToken);
-router.post('/user', jumperUser.newUser);
-router.get('/user', user.user);
 router.post('/verifyToken', jumperToken.verifyToken);
+router.post('/verifyJumperSavedToken', jumperAuth, jumperToken.verifyJumperSavedToken);
+router.post('/generateToken', jumperAuth, jumperToken.generateToken);
+router.post('/user', jumperAuth, jumperUser.newUser);
+router.get('/user', jumperAuth, user.user);
 
 // routes for the services being called from MoEngage
 router.get('/refresh_token', jumperToken.refreshAllToken);

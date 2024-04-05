@@ -6,7 +6,8 @@ const api = require('../utils/api');
 const controller = {
   newUser: async (req, res) => {
     try {
-      const {user_uid, shop_name, token, refresh_token, client_key, secret_key, is_valid_token, mo_engage_jumper_app_token, dlr_web_hook_url, sender_name, wa_business_number} = req.body;
+      const { shop_name, token, refresh_token, client_key, secret_key, is_valid_token, mo_engage_jumper_app_token, dlr_web_hook_url, sender_name, wa_business_number} = req.body;
+      const user_uid = req.query.userId;
       const uid_shop_name = `${user_uid}_${shop_name}`;
       console.log('>>> new user', uid_shop_name);
 

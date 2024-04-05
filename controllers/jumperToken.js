@@ -59,7 +59,9 @@ const controller = {
   generateToken: async (req, res) => {
     try {
       console.log(process.env.TOKEN_KEY);
-      const { userId, shopName: token } = req.body;
+      const { shopName: token } = req.body;
+      const userId = req.query.userId;
+      console.log("generate token for", userId);
       let data = {
           time: Date(),
           userId: userId,

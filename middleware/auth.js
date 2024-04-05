@@ -5,7 +5,14 @@ module.exports = async (req, res, next) => {
     try {
         const authorization = req.header("authorization");
         const authToken = authorization?.split(" ").pop()?.trim();
-        const {userId, shopName} = req.query;
+        let {userId, shopName} = req.query;
+        const decoded = jwt.verify(authToken, process.env.TOKEN_KEY);
+        console.log("decoded token", decoded);
+        if(decoded.userId) {
+          userId = decoded.userId
+          console.log('used userId from token', userId)
+        }
+
         const uid_shop_name = `${userId}_${shopName}`;
         const {mo_engage_jumper_app_token, token} = await getUserDetailsBy_uid_shop_name(uid_shop_name);
         
@@ -20,7 +27,6 @@ module.exports = async (req, res, next) => {
           return res.status(403).send("Access denied.")
         };
 
-        const decoded = jwt.verify(authToken, process.env.TOKEN_KEY);
         req.user = decoded;
         req.userId = userId;
         req.shopName = shopName;

@@ -16,7 +16,8 @@ const controller = {
     }
   },
   verifyJumperSavedToken: async (req, res) => {
-    const { userId, shopName } = req.body;
+    const { shopName } = req.body;
+    const userId = req.userId;
     const uid_shop_name = `${userId}_${shopName}`;
     const {status, verified} = await api.verifyJumperSavedToken({uid_shop_name});
     console.log(`verify jumper token init for uid_shop_name: ${uid_shop_name}`);
@@ -60,7 +61,7 @@ const controller = {
     try {
       console.log(process.env.TOKEN_KEY);
       const { shopName: token } = req.body;
-      const userId = req.query.userId;
+      const userId = req.userId;
       console.log("generate token for", userId);
       let data = {
           time: Date(),

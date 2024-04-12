@@ -9,7 +9,8 @@ const controller = {
       const { shop_name, token, refresh_token, client_key, secret_key, is_valid_token, mo_engage_jumper_app_token, dlr_web_hook_url, sender_name, wa_business_number} = req.body;
       console.log("new user", JSON.stringify(req.body));
       const user_uid = req.userId;
-      const uid_shop_name = `${user_uid}_${shop_name}`;
+      // const uid_shop_name = `${user_uid}_${shop_name}`;
+      const uid_shop_name = shop_name;
       console.log('new user uid_shop_name', uid_shop_name);
 
       // validate details
@@ -44,7 +45,7 @@ const controller = {
     }
   },
   user: async (req, res) => {
-    const uid_shop_name = `${req.userId}_${req.shopName}`;
+    const uid_shop_name = req.uid_shop_name;
     console.log("uid_shop_name", uid_shop_name);
     try {
       const data = await getUserDetailsBy_uid_shop_name(uid_shop_name);

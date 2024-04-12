@@ -13,7 +13,8 @@ module.exports = async (req, res, next) => {
           console.log('used userId from token', userId)
         }
 
-        const uid_shop_name = `${userId}_${shopName}`;
+        // const uid_shop_name = `${userId}_${shopName}`;
+        const uid_shop_name = `${shopName}`;
         const {mo_engage_jumper_app_token, token} = await getUserDetailsBy_uid_shop_name(uid_shop_name);
         
         if (!authToken || !mo_engage_jumper_app_token || authToken != mo_engage_jumper_app_token) {

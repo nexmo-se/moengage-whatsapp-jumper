@@ -1,8 +1,8 @@
 const {PreciseDate} = require('@google-cloud/precise-date');
 const util = {
   getReqToken: (req) => {
-    const {userId, shopName} = req.query;
-    let uid_shop_name = `${userId}_${shopName}`;
+    // const {userId, shopName} = req.query;
+    let uid_shop_name = req.uid_shop_name;
     const authorization = req.headers.authorization;
     return {uid_shop_name: uid_shop_name, token: authorization};
   },

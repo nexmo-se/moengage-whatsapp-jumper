@@ -15,7 +15,8 @@ module.exports = async (req, res, next) => {
           console.log('used userId from token', userId)
         }
 
-        const uid_shop_name = `${userId}_${shopName}`;
+        // const uid_shop_name = `${userId}_${shopName}`;
+        const uid_shop_name = shopName;
         
         if (!authorization || !userId) {
           const dataToLog = {

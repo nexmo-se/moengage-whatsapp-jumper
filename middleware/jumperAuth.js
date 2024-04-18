@@ -1,11 +1,26 @@
 const jwt = require("jsonwebtoken");
 const { jwtDecode } = require('jwt-decode');
+const util = require("../utils/util.js");
 
 module.exports = async (req, res, next) => {
     try {
         const authorization = req.header("authorization");
         const authToken = authorization?.split(" ").pop()?.trim();
         console.log("authorization", authorization);
+        
+        // verify token
+        if(process.env.IS_LOCAL != "true") {
+          try {
+            const secretKey = process.env.SECRET_KEY;
+            const algorithm = 'HS256';
+            util.verifyToken(authToken, algorithm, secretKey);  
+          } catch (error) {
+            console.log("Error", error)
+            return res.status(400).send("Invalid token");
+          }
+        }
+        
+
         let {userId, shopName} = req.query;
         const decoded = jwtDecode(authorization);
         console.log("decoded token", decoded);

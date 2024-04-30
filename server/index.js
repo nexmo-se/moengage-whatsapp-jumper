@@ -1,4 +1,3 @@
-console.log("Starting Messaging Demo")
 require('dotenv').config();
 const express = require('express');
 const app = express();
@@ -14,6 +13,11 @@ const jwt = require('jsonwebtoken');
 const {getAuthToken, getRefreshToken, get_templates, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id} = require('../datastore');
 const { postFormData, axios_error_logger, axiosInstance, updateStatusToMoEngage } = require('../utils/api');
 const cors = require('cors');
+const {accessSecret} = require('../utils/secret_manager_service.get_secret');
+
+if(process.env.IS_LOCAL != 'true') {
+  accessSecret();
+}
 
 // The kind for the new entity
 const kind = process.env.DT_KIND;

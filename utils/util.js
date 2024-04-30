@@ -40,11 +40,11 @@ const util = {
     return jwt.verify(token, secretKey, { algorithms: [algorithm] }, (err, decoded) => {
       if (err) {
         // Token verification failed
-        console.error('Token verification failed:', err.message);
+        console.error('Token verification failed:', JSON.stringify(err.message));
         throw(err);
       } else {
         // Token is valid, decoded contains the decoded payload
-        console.log('Token is valid:', decoded);
+        console.log('Token is valid:', JSON.stringify(decoded));
         return decoded;
       }
     });

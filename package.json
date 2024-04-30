@@ -15,6 +15,7 @@
   "dependencies": {
     "@google-cloud/datastore": "^7.5.1",
     "@google-cloud/precise-date": "^4.0.0",
+    "@google-cloud/secret-manager": "^5.4.0",
     "@google-cloud/tasks": "^4.0.0",
     "agentkeepalive": "^4.3.0",
     "axios": "^1.4.0",

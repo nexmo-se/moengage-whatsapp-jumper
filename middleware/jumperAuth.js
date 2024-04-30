@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { jwtDecode } = require('jwt-decode');
 const util = require("../utils/util.js");
+const {checkAuth} = require('../datastore/datastore.js');
+
 
 module.exports = async (req, res, next) => {
     try {
@@ -11,9 +13,18 @@ module.exports = async (req, res, next) => {
         // verify token
         if(process.env.IS_LOCAL != "true") {
           try {
-            const secretKey = process.env.SECRET_KEY;
+            const secretKey = process.env.JUMPER_SECRET_KEY;
             const algorithm = 'HS256';
-            util.verifyToken(authToken, algorithm, secretKey);  
+            const decoded = util.verifyToken(authToken, algorithm, secretKey);
+            const result = await checkAuth(decoded);
+            if(result.success) {
+              // Token is valid, decoded contains the decoded payload
+              console.log('Token is valid:', JSON.stringify(decoded));
+            } else {
+              // Token verification failed
+              console.error('Token verification failed. Token not found in db:', result);
+              throw(result);
+            }
           } catch (error) {
             console.log("Error", error)
             return res.status(400).send("Invalid token");

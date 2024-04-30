@@ -237,8 +237,36 @@ const store_message = async ({ mo_msg_id, mo_waba_number, mo_template_id, wa_mes
   return await dt_store({kind: 'MOENGAGE_MESSAGES', key:wa_message_id, data});
 };
 
+const checkAuth = async (dictToken) => {
+  try {
+    if ("auth" in dictToken) {
+      const authKey = datastore.keyFromLegacyUrlsafe(dictToken['auth']);
+      const auth = await datastore.get(authKey);
+      
+      if (!auth) {
+        console.info('auth_key_got_removed');
+        return {
+          success: false,
+          sessionExpired: true,
+          errorMessage: 'Your session has expired.'
+        };
+      } else {
+        return {
+          success: true,
+          sessionExpired: false,
+          errorMessage: 'Session is valid'
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    // Handle error appropriately
+    throw error;
+  }
+}
+
 
 // module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUsersToUpdateToken, get_message_by_wa_message_id, store_message, getUsersByToken};
-module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_templates_by_uid_shop_name, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_templates_by_uid_shop_name, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id};
+module.exports = {dt_store, dt_get, getUserDetailsBy_UID, getUserDetailsBy_uid_shop_name, getUsersToUpdateToken, getAuthToken, getUsersByToken, getRefreshToken, get_templates, get_templates_by_uid_shop_name, get_wa_id, store_auth_token, store_refresh_token, store_templates, store_templates_by_uid_shop_name, store_message, store_wa_id, get_whitelist, get_message_by_conv_id, get_message_by_wa_message_id, checkAuth};
 
 

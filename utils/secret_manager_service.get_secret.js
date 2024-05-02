@@ -10,6 +10,12 @@ async function accessSecret() {
   });
   const payload = version.payload.data.toString('utf8');
   process.env.JUMPER_SECRET_KEY = payload;
+
+  const [reponse] = await client.accessSecretVersion({
+    name: 'projects/jumperdevnew/secrets/MOENGAGE_SECRET_KEY/versions/latest',
+  });
+  const MOENGAGE_SECRET_KEY = reponse.payload.data.toString('utf8');
+  process.env.MOENGAGE_SECRET_KEY = MOENGAGE_SECRET_KEY;
 }
 
 module.exports = {accessSecret};

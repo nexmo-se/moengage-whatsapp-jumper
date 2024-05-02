@@ -6,7 +6,7 @@ module.exports = async (req, res, next) => {
         const authorization = req.header("authorization");
         const authToken = authorization?.split(" ").pop()?.trim();
         let {userId, shopName} = req.query;
-        const decoded = jwt.verify(authToken, process.env.TOKEN_KEY);
+        const decoded = jwt.verify(authToken, process.env.MOENGAGE_SECRET_KEY);
         console.log("decoded token", decoded);
         if(decoded.userId) {
           userId = decoded.userId

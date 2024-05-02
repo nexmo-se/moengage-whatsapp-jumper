@@ -60,7 +60,7 @@ const controller = {
   },
   generateToken: async (req, res) => {
     try {
-      console.log(process.env.TOKEN_KEY);
+      console.log(process.env.MOENGAGE_SECRET_KEY);
       const { shopName: token } = req.body;
       const userId = req.userId;
       console.log("generate token for", userId);
@@ -68,7 +68,7 @@ const controller = {
           time: Date(),
           userId: userId,
       } 
-      const generatedToken = jwt.sign(data, process.env.TOKEN_KEY);
+      const generatedToken = jwt.sign(data, process.env.MOENGAGE_SECRET_KEY);
       res.status(200).send({token: generatedToken});
     } catch (error) {
       console.error(error);

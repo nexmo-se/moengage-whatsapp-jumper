@@ -35,13 +35,24 @@ const controller = {
 
         try {
           const subscription = await api.getSubscriptions({uid_shop_name: uid_shop_name});
+          console.log('subscription', JSON.stringify(subscription));
           let liveChatSubscriptionEnabled = false;
-          let permissions = subscription?.data[0]?.permission;
-          if(subscription?.data?.length && permissions?.includes('livechat')) {
-            liveChatSubscriptionEnabled = true;
+          if(subscription?.data?.length) {
+            subscription?.data.forEach(sub => { 
+              if(sub.subscription_type == 'livechat') {
+                liveChatSubscriptionEnabled = true;
+                console.log( 'live chat is enabled' );
+              }
+            })
           }
+
           if(!liveChatSubscriptionEnabled) {
-            let bodyToSetPermission = [{"permission":"livechat","webhook":`${process.env.ROOT_URL}/jumper_callback`}];
+            let bodyToSetPermission = []
+            if(subscription?.data?.length) {
+              bodyToSetPermission = [...subscription?.data, {"permission":"livechat","webhook":`${process.env.ROOT_URL}/jumper_callback`}];
+            } else {
+              bodyToSetPermission = [{"permission":"livechat","webhook":`${process.env.ROOT_URL}/jumper_callback`}];
+            }
             const response = await api.setSubscriptions( { data: bodyToSetPermission }, {uid_shop_name: uid_shop_name} )
             console.log(response);
             console.log('Livechat permission set successful')

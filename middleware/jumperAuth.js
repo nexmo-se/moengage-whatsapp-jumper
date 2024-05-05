@@ -34,7 +34,7 @@ module.exports = async (req, res, next) => {
 
         let {userId, shopName} = req.query;
         const decoded = jwtDecode(authorization);
-        console.log("decoded token", decoded);
+        // console.log("decoded token", decoded);
         if(decoded.user_id || decoded.userid) {
           userId = decoded.user_id || decoded.userid;
           // decoded.role_id

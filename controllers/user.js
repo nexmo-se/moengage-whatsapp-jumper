@@ -80,9 +80,6 @@ const controller = {
       console.error(error);
       return res.status(500).json(error);
     }
-  },
-  updateLiveSubscription: async(req, res) {
-
   }
 };
 

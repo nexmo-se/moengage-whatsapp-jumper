@@ -48,6 +48,10 @@ const controller = {
     const {status, wa_message_id, message} = controller.getMessageStatusFromRequest(req);
     console.log('status:', JSON.stringify({ status, wa_message_id }));
 
+    if( !wa_message_id ) {
+      return res.json({ "status": "error", "message": "failed sending  callback to moengage, wa_message_id not found" });
+    }
+
     try {
       // update message to store
       const objMessage = await get_message_by_wa_message_id({wa_message_id}) || {};

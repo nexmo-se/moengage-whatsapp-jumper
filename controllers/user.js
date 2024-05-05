@@ -30,6 +30,27 @@ const controller = {
         // {updated_token: data.access_token, updated_refresh_token: data.refresh_token, old_token: token, expires_in: data.expires_in}
         const expiresIn = util.getDateForExpirySeconds(data.expires_in);
         await dt_store({kind: 'MOENGAGE_CONF', key: uid_shop_name, data: {uid_shop_name, user_uid, shop_name, token: data.access_token, refresh_token: data.refresh_token, mo_engage_jumper_app_token, client_key, secret_key, is_valid_token, dlr_web_hook_url, sender_name, wa_business_number, token_expiry_time: expiresIn, last_updated_date: util.currentUtcTime()}});
+
+        console.log('Token saved successfully');
+
+        try {
+          const subscription = await api.getSubscriptions({uid_shop_name: uid_shop_name});
+          let liveChatSubscriptionEnabled = false;
+          let permissions = subscription?.data[0]?.permission;
+          if(subscription?.data?.length && permissions?.includes('livechat')) {
+            liveChatSubscriptionEnabled = true;
+          }
+          if(!liveChatSubscriptionEnabled) {
+            let bodyToSetPermission = [{"permission":"livechat","webhook":`${process.env.ROOT_URL}/jumper_callback`}];
+            const response = await api.setSubscriptions( { data: bodyToSetPermission }, {uid_shop_name: uid_shop_name} )
+            console.log(response);
+            console.log('Livechat permission set successful')
+          }
+        } catch (error) {
+          console.error("Error while setting permissions");
+        }
+        
+
         res.status(200).json({status: 'success', data});
       } else {
         res.status(200).json({status: 'success', data: {refreshTokenError: 'Token is not refreshed due to invalid refresh token', data}});
@@ -60,6 +81,9 @@ const controller = {
       return res.status(500).json(error);
     }
   },
+  updateLiveSubscription: async(req, res) {
+
+  }
 };
 
 module.exports = controller;

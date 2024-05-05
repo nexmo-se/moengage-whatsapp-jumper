@@ -206,4 +206,16 @@ const fetchWaTemplate = async function(id, auth) {
   return data;
 };
 
-module.exports = { postFormData, refreshToken, verifyJumperSavedToken, fetchSocialChannels, fetchWaTemplates, axios_error_logger, axiosApiCall, axiosInstance, updateStatusToMoEngage, getJumperToken, fetchWaTemplate };
+const getSubscriptions = async function(auth) {
+  const response = await fetch(`app/list-subscription`, auth);
+  const data = await response.json();
+  return data;
+};
+
+const setSubscriptions = async function(body, uid_shop_name) {
+  const response = await postFormData('app/add-subscription', body, '', uid_shop_name);
+  const data = await response.json();
+  return data;
+};
+
+module.exports = { postFormData, refreshToken, verifyJumperSavedToken, fetchSocialChannels, fetchWaTemplates, axios_error_logger, axiosApiCall, axiosInstance, updateStatusToMoEngage, getJumperToken, fetchWaTemplate, getSubscriptions, setSubscriptions };

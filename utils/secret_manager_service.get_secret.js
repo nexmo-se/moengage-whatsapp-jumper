@@ -11,11 +11,12 @@ async function accessSecret() {
   const payload = version.payload.data.toString('utf8');
   process.env.JUMPER_SECRET_KEY = payload;
 
-  const [reponse] = await client.accessSecretVersion({
-    name: `projects/${process.env.DT_PROJECT_ID}/secrets/MOENGAGE_SECRET_KEY/versions/latest`,
-  });
-  const MOENGAGE_SECRET_KEY = reponse.payload.data.toString('utf8');
-  process.env.MOENGAGE_SECRET_KEY = MOENGAGE_SECRET_KEY;
+  // const [reponse] = await client.accessSecretVersion({
+  //   name: `projects/${process.env.DT_PROJECT_ID}/secrets/MOENGAGE_SECRET_KEY/versions/latest`,
+  // });
+  // const MOENGAGE_SECRET_KEY = reponse.payload.data.toString('utf8');
+  // process.env.MOENGAGE_SECRET_KEY = MOENGAGE_SECRET_KEY;
+  process.env.MOENGAGE_SECRET_KEY = process.env.TOKEN_KEY;
 }
 
 module.exports = {accessSecret};

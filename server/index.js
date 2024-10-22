@@ -23,15 +23,21 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 app.use(require('../router'));
 
+console.log('process.env.ENVIRONMENT >>> ', process.env.ENVIRONMENT)
+
 if (process.env.ENVIRONMENT == "STAGING") {
   app.use('/moengage', require('../router'));
+  app.get('/moengage', (req, res) => {
+    res.json(200);
+  });
 } else {
+  app.get('/', (req, res) => {
+    res.json(200);
+  });
   app.use(require('../router'));
 }
 
-app.get('/', (req, res) => {
-  res.json(200);
-});
+
 
 server.on('request', app)
 

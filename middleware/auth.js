@@ -3,6 +3,7 @@ const {getUserDetailsBy_uid_shop_name} = require('../datastore/datastore');
 
 module.exports = async (req, res, next) => {
     try {
+      console.log('auth >>>>>>>>>>>')
         const authorization = req.header("authorization");
         const authToken = authorization?.split(" ").pop()?.trim();
         let {userId, shopName} = req.query;
@@ -36,6 +37,8 @@ module.exports = async (req, res, next) => {
         req.jumperToken = token;
         next();
     } catch (error) {
+        console.log(JSON.stringify(error));
+        console.error(error);
         res.status(400).send("Invalid token");
     }
 };
